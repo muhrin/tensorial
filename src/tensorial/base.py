@@ -182,6 +182,13 @@ def _create_tensor_irreps(  # pylint: disable=redefined-outer-name
 
 
 @create_tensor.register
+def _create_tensor_str(  # pylint: disable=redefined-outer-name
+    irreps: str, value: Array
+) -> e3j.IrrepsArray:
+    return e3j.IrrepsArray(irreps, value)
+
+
+@create_tensor.register
 def _create_tensor_attr(attr: Attr, value) -> e3j.IrrepsArray:
     return attr.create_tensor(value)
 

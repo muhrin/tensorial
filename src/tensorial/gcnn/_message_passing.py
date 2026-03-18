@@ -29,15 +29,15 @@ class MessagePassingConvolution(linen.Module):
     @jt.jaxtyped(typechecker=beartype.beartype)
     def __call__(
         self,
-        node_feats: IrrepsArrayShape["n_nodes node_irreps"],
-        edge_features: IrrepsArrayShape["n_edges edge_irreps"],
-        radial_embedding: jt.Float[Array, "n_edges radial_embedding_dim"],
-        senders: IndexArray["n_edges"],
-        receivers: IndexArray["n_edges"],
+        node_feats: IrrepsArrayShape["n_node node_irreps"],
+        edge_features: IrrepsArrayShape["n_edge edge_irreps"],
+        radial_embedding: jt.Float[Array, "n_edge radial_embedding_dim"],
+        senders: IndexArray["n_edge"],
+        receivers: IndexArray["n_edge"],
         *,
-        edge_mask: jt.Bool[Array, "n_edges"] | None = None,
-        node_types: jt.Int[Array, "n_nodes"] | None = None,
-    ) -> IrrepsArrayShape["n_nodes node_irreps_out"]:
+        edge_mask: jt.Bool[Array, "n_edge"] | None = None,
+        node_types: jt.Int[Array, "n_node"] | None = None,
+    ) -> IrrepsArrayShape["n_node node_irreps_out"]:
         """
         Performs graph convolution operations on node and edge features using tensor products and
         radial embeddings.
@@ -75,7 +75,7 @@ class MessagePassingConvolution(linen.Module):
         )
 
         # Make a compound message
-        messages: IrrepsArrayShape["n_edges node_irreps+edge_irreps"] = e3j.concatenate(
+        messages: IrrepsArrayShape["n_edge node_irreps+edge_irreps"] = e3j.concatenate(
             [messages.filter(irreps_out + "0e"), edge_features]
         ).regroup()
 

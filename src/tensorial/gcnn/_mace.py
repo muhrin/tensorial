@@ -60,7 +60,7 @@ class SymmetricContraction(linen.Module):
         self,
         inputs: IrrepsArrayShape["n_node features irreps"],
         input_type: IndexArray["n_node"],
-    ) -> e3j.IrrepsArray:
+    ) -> IrrepsArrayShape["n_node features irreps_out"]:
         # Treat batch indices using vmap
         shape = jnp.broadcast_shapes(inputs.shape[:-2], input_type.shape)
         inputs = inputs.broadcast_to(shape + inputs.shape[-2:])
@@ -194,9 +194,9 @@ class EquivariantProductBasisBlock(linen.Module):
     @jt.jaxtyped(typechecker=beartype.beartype)
     def __call__(
         self,
-        node_features: IrrepsArrayShape["n_nodes featuresXirreps"],
+        node_features: IrrepsArrayShape["n_node featuresXirreps"],
         node_types: IndexArray["n_node"],
-    ) -> e3j.IrrepsArray:
+    ) -> IrrepsArrayShape["n_node irreps_out"]:
         node_features = node_features.mul_to_axis().remove_zero_chunks()
         node_features = self.symmetric_contractions(node_features, node_types)
         node_features = node_features.axis_to_mul()
@@ -219,14 +219,14 @@ class InteractionBlock(linen.Module):
     @jt.jaxtyped(typechecker=beartype.beartype)
     def __call__(
         self,
-        node_features: IrrepsArrayShape["n_nodes node_irreps"],
-        edge_features: IrrepsArrayShape["n_edges edge_irreps"],
-        radial_embedding: jt.Float[jnp.ndarray, "n_edges radial_embeddings"],
-        senders: jt.Int[Array, "n_edges"],
-        receivers: jt.Int[Array, "n_edges"],
+        node_features: IrrepsArrayShape["n_node node_irreps"],
+        edge_features: IrrepsArrayShape["n_edge edge_irreps"],
+        radial_embedding: jt.Float[jnp.ndarray, "n_edge radial_embeddings"],
+        senders: jt.Int[Array, "n_edge"],
+        receivers: jt.Int[Array, "n_edge"],
         *,
-        edge_mask: jt.Bool[Array, "n_edges"] | None = None,
-    ) -> IrrepsArrayShape["n_nodes target_irreps"]:
+        edge_mask: jt.Bool[Array, "n_edge"] | None = None,
+    ) -> IrrepsArrayShape["n_node target_irreps"]:
         node_features = e3j.flax.Linear(node_features.irreps, name="linear_up")(node_features)
 
         node_features = self._message_passing(
@@ -257,7 +257,7 @@ class NonLinearReadoutBlock(linen.Module):
 
     def __call__(
         self, inputs: IrrepsArrayShape["n_node irreps"]
-    ) -> IrrepsArrayShape["n_nodes output_irreps"]:
+    ) -> IrrepsArrayShape["n_node output_irreps"]:
         inputs = self._linear(inputs)
         inputs = e3j.gate(inputs, even_act=self.activation, even_gate_act=self.gate)
         return self._linear_out(inputs)
@@ -329,16 +329,16 @@ class MaceLayer(linen.Module):
     @jt.jaxtyped(typechecker=beartype.beartype)
     def __call__(
         self,
-        node_features: IrrepsArrayShape["n_nodes node_irreps"],
-        edge_features: IrrepsArrayShape["n_edges edge_irreps"],
-        node_species: jt.Int[Array, "n_nodes"],  # int between 0 and num_species - 1
-        radial_embedding: jt.Float[Array, "n_edges radial_embedding"],
-        senders: jt.Int[Array, "n_edges"],
-        receivers: jt.Int[Array, "n_edges"],
+        node_features: IrrepsArrayShape["n_node node_irreps"],
+        edge_features: IrrepsArrayShape["n_edge edge_irreps"],
+        node_species: jt.Int[Array, "n_node"],  # int between 0 and num_species - 1
+        radial_embedding: jt.Float[Array, "n_edge radial_embedding"],
+        senders: jt.Int[Array, "n_edge"],
+        receivers: jt.Int[Array, "n_edge"],
         *,
-        edge_mask: jt.Bool[Array, "n_edges"] | None = None,
-    ) -> IrrepsArrayShape["n_nodes node_irreps_out"]:
-        skip_connection: IrrepsArrayShape["n_nodes feature*hidden_irreps"] | None = None
+        edge_mask: jt.Bool[Array, "n_edge"] | None = None,
+    ) -> IrrepsArrayShape["n_node node_irreps_out"]:
+        skip_connection: IrrepsArrayShape["n_node feature*hidden_irreps"] | None = None
         if self._skip_connection is not None:
             skip_connection = self._skip_connection(node_species, node_features)
 
@@ -479,11 +479,11 @@ class Mace(linen.Module):
     @_base.shape_check
     def __call__(self, graph: jraph.GraphsTuple) -> jraph.GraphsTuple:
         # Embeddings
-        node_feats: IrrepsArrayShape["n_nodes feature*irreps"] = graph.nodes[keys.FEATURES]
+        node_feats: IrrepsArrayShape["n_node feature*irreps"] = graph.nodes[keys.FEATURES]
         node_species = graph.nodes[keys.SPECIES]
 
         # Interactions
-        outputs: list[IrrepsArrayShape["n_nodes output_irreps"]] = []
+        outputs: list[IrrepsArrayShape["n_node output_irreps"]] = []
         # Deal with the y0 values of the expansion
         if self.y0_values:
             outputs.append(self._y0[node_species])
@@ -500,7 +500,7 @@ class Mace(linen.Module):
                 graph.receivers,
                 edge_mask=graph.edges.get(keys.MASK),
             )
-            node_outputs: IrrepsArrayShape["n_nodes output_irreps"] = readout(node_feats)
+            node_outputs: IrrepsArrayShape["n_node output_irreps"] = readout(node_feats)
 
             outputs += [node_outputs]
 

@@ -149,7 +149,16 @@ class NodewiseEmbedding(linen.Module):
                     # Assume it is a node attribute
                     path = ("nodes",) + path
 
-                value = _tree.get(graph, path)
+                try:
+                    value = _tree.get(graph, path)
+                except KeyError:
+                    root = path[0]
+                    raise ValueError(
+                        f"Did not find '{_tree.path_to_str(path[1:])}' in "
+                        f"{root}, available entries are: "
+                        f"{', '.join(_tree.get(graph, root).keys())}"
+                    ) from None
+
                 value: e3j.IrrepsArray = base.create_tensor(attr, value)
 
                 if path[0] == "globals":

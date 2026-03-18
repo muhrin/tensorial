@@ -89,7 +89,9 @@ class OneHot(base.Attr):
         raise ValueError("Expected self.irreps to contain a MulIrrep.")
 
     @jt.jaxtyped(typechecker=beartype.beartype)
-    def create_tensor(self, value: jt.Int[Array, "n_vals"]) -> e3j.IrrepsArray:
+    def create_tensor(
+        self, value: jt.Int[Array, "n_vals"]
+    ) -> IrrepsArrayShape["n_node num_classes"]:
         return e3j.IrrepsArray(self.irreps, jax.nn.one_hot(value, self.num_classes))
 
 

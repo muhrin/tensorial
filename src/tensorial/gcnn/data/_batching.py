@@ -312,13 +312,18 @@ def _dummy_graph_like(graph: jraph.GraphsTuple) -> jraph.GraphsTuple:
     num_nodes = sum(graph.n_node)
     num_edges = sum(graph.n_edge)
 
+    graph_globals = jax.tree.map(np.zeros_like, graph.globals)
+    # Set the global mask to False for these graphs as they are dummies
+    if isinstance(graph_globals, dict) and keys.MASK not in graph_globals:
+        graph_globals[keys.MASK] = np.zeros(num_graphs, dtype=bool)
+
     return jraph.GraphsTuple(
         # Push all the nodes and edges to the final graph which is typically the padding graph
         n_node=np.array((num_graphs - 1) * [0] + [num_nodes]),
         n_edge=np.array((num_graphs - 1) * [0] + [num_edges]),
         nodes=jax.tree.map(np.zeros_like, graph.nodes),
         edges=jax.tree.map(np.zeros_like, graph.edges),
-        globals=jax.tree.map(np.zeros_like, graph.globals),
+        globals=graph_globals,
         senders=jax.tree.map(np.zeros_like, graph.senders),
         receivers=jax.tree.map(np.zeros_like, graph.receivers),
     )

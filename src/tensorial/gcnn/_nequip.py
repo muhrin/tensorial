@@ -75,15 +75,15 @@ class InteractionBlock(linen.Module):
     @jt.jaxtyped(typechecker=beartype.beartype)
     def __call__(
         self,
-        node_features: IrrepsArrayShape["n_nodes irreps"],
-        edge_features: IrrepsArrayShape["n_edges edge_irreps"],
-        radial_embedding: jt.Float[Array, "n_edges radial_embedding_dim"],
-        senders: IndexArray["n_edges"],
-        receivers: IndexArray["n_edges"],
-        node_species: jt.Int[Array, "n_nodes"] | None = None,
+        node_features: IrrepsArrayShape["n_node irreps"],
+        edge_features: IrrepsArrayShape["n_edge edge_irreps"],
+        radial_embedding: jt.Float[Array, "n_edge radial_embedding_dim"],
+        senders: IndexArray["n_edge"],
+        receivers: IndexArray["n_edge"],
+        node_species: jt.Int[Array, "n_node"] | None = None,
         *,
-        node_mask: jt.Bool[Array, "n_nodes"] | None = None,
-        edge_mask: jt.Bool[Array, "n_edges"] | None = None,
+        node_mask: jt.Bool[Array, "n_node"] | None = None,
+        edge_mask: jt.Bool[Array, "n_edge"] | None = None,
     ) -> e3j.IrrepsArray:
         """A NequIP interaction made up of the following steps:
 

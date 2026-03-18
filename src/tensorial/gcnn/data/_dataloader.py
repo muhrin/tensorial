@@ -96,7 +96,7 @@ class GraphLoader(reax.DataLoader[_common.GraphsOrGraphsTuple, _common.GraphsOrG
         return len(self.sampler)
 
     @override
-    def __iter__(self) -> Iterator[tuple[jraph.GraphsTuple, ...]]:
+    def __iter__(self) -> Iterator[tuple[jraph.GraphsTuple | None, ...]]:
         for idxs in self._sampler:
             batch_graphs = tuple(
                 batcher.fetch(idxs) if batcher is not None else None for batcher in self._batchers
