@@ -54,16 +54,27 @@ class UpdateDict(collections.abc.MutableMapping):
                 if value is not self.DELETED:
                     yield key
 
+        # Yield new keys added to overrides
+        for key, value in self._overrides.items():
+            if key not in self._updating and value is not self.DELETED:
+                yield key
+
     def __len__(self):
-        return len(self._updating) - len(
-            list(filter(lambda val: val is self.DELETED, self._overrides.values()))
-        )
+        count = len(self._updating)
+        for key, value in self._overrides.items():
+            if key in self._updating:
+                if value is self.DELETED:
+                    count -= 1
+            else:
+                if value is not self.DELETED:
+                    count += 1
+        return count
 
     def _asdict(self) -> dict:
         self_dict = dict(self._updating)
         for key, value in self._overrides.items():
             if value is self.DELETED:
-                del self_dict[key]
+                self_dict.pop(key, None)
             elif isinstance(value, UpdateDict):
                 self_dict[key] = value._asdict()
             else:

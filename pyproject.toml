@@ -64,6 +64,7 @@ dev = [
     'pytest',
     'pytest-cov',
     'pytest-env',
+    "pytest-codspeed",
     'pre-commit',
     'pylint',
     'black',
@@ -81,7 +82,7 @@ exclude = [
     '.github/',
     'docs/',
     'examples/',
-    'test/',
+    'tests/',
 ]
 
 [project.entry-points."reax.plugins.metrics"]

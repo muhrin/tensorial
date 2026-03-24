@@ -4,10 +4,11 @@ import e3nn_jax as e3j
 import jax
 import jraph
 import numpy as np
-import utils
 
 from tensorial import gcnn
 from tensorial.gcnn import _mace
+
+from ... import utils
 
 
 def test_symmetric_contraction():
@@ -33,7 +34,7 @@ def test_mace(cube_graph: jraph.GraphsTuple):
         _mace.Mace(
             irreps_out=e3j.Irreps("0e"),
             out_field=gcnn.atomic.ENERGY_PER_ATOM,
-            hidden_irreps=" 2x0e + 2x1o",
+            hidden_irreps="2x0e + 2x1o",
             num_types=num_types,
             y0_values=np.random.rand(num_types).tolist(),
         ),

@@ -57,7 +57,7 @@ repos:
         exclude:
           (?x)^(
           docs/.*|
-          test/.*
+          tests/.*
           )$
 
   - repo: https://github.com/srstevenson/nb-clean

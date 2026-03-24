@@ -8,7 +8,7 @@ from tensorial.datasets.qm9 import Qm9
 @pytest.fixture(scope="session")
 def qm9_data_dir(pytestconfig) -> pathlib.Path:
     """Returns the path to the directory containing the test database."""
-    return pytestconfig.rootpath / "test" / "assets"
+    return pathlib.Path(__file__).parent / "../assets"
 
 
 def get_qm9_filenames(data_dir, limit=None, shuffle=False, rng_seed=None):
