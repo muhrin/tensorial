@@ -5,6 +5,7 @@ import math
 import e3nn_jax
 import jax
 import jax.numpy as jnp
+from typing_extensions import override
 
 import tensorial
 
@@ -41,6 +42,7 @@ class RadialBasis(tensorial.Attr):
     def evaluate(self, radius):
         """Evaluate the radial basis at `r`"""
 
+    @override
     def create_tensor(self, value) -> jnp.array:
         return super().create_tensor(self.evaluate(value))  # pylint: disable=not-callable
 
@@ -67,6 +69,7 @@ class E3nnRadial(RadialBasis):
     def cutoff(self) -> bool | None:
         return self._cutoff
 
+    @override
     def evaluate(self, radius):
         return e3nn_jax.soft_one_hot_linspace(
             radius,
@@ -143,6 +146,7 @@ class OrthoBasis(RadialBasis):
 
             self.f_samples = self.f_samples.at[:, i].set(ui / self.norm(ui))
 
+    @override
     def evaluate(self, radius):
         r_normalized = radius / self.radial_step
         r_normalized_floor_int = jnp.floor(r_normalized).astype(jnp.int64)

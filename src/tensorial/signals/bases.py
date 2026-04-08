@@ -1,14 +1,15 @@
 import abc
 
 import e3nn_jax as e3j
+import jax
 import jax.numpy as jnp
-
-import tensorial
+from typing_extensions import override
 
 from . import radials
+from .. import base
 
 
-class SphericalBasis(tensorial.Attr):
+class SphericalBasis(base.Attr):
     """A set of spherical harmonics basis functions"""
 
     def __init__(self, l_max: int, p_val=1, p_arg=-1):
@@ -39,14 +40,16 @@ class SphericalBasis(tensorial.Attr):
         # * math.sqrt(math.pi)
         return e3j.spherical_harmonics(self.irreps, x, normalize=True, normalization="integral")
 
-    def create_tensor(self, value) -> jnp.array:
+    @override
+    def create_tensor(self, value) -> jax.Array:
         return self.evaluate(value)
 
 
-class RadialSphericalBasis(tensorial.Attr):
+class RadialSphericalBasis(base.Attr):
     """A combined basis of a set of radial functions and spherical harmonics"""
 
-    def create_tensor(self, value: jnp.array) -> jnp.array:
+    @override
+    def create_tensor(self, value: jax.Array) -> jax.Array:
         """Create the signal that represents the expansion of the signal function in this basis"""
         return self.evaluate(value)
 
@@ -56,13 +59,13 @@ class RadialSphericalBasis(tensorial.Attr):
 
 
 class SimpleRadialSphericalBasis(RadialSphericalBasis):
-
     def __init__(self, radial: radials.RadialBasis, spherical: SphericalBasis):
         self.radial = radial
         self.spherical = spherical
         num_radials = len(self.radial)
         super().__init__(spherical.irreps.repeat(num_radials))
 
+    @override
     def evaluate(self, value):
         """Evaluate the basis functions at the given value"""
         angular = self.spherical.evaluate(value).array
@@ -70,6 +73,6 @@ class SimpleRadialSphericalBasis(RadialSphericalBasis):
         radial = self.radial.evaluate(r)
         return jnp.einsum("...i,...j->...ij", radial, angular)
 
-    def expand(self, x: jnp.array, coefficients: jnp.array):
+    def expand(self, x: jax.Array, coefficients: jax.Array):
         basis_values = self.evaluate(x)
         return jnp.einsum("ij,...ij->...", coefficients, basis_values)
