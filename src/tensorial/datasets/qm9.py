@@ -218,14 +218,14 @@ def to_graph(
 
     # Convert species labels to numbers
     atomic_numbers = np.fromiter(
-        map(lambda symbol: ase.data.atomic_numbers[symbol], entry["species"]), dtype=float
+        map(lambda symbol: ase.data.atomic_numbers[symbol], entry["species"]), dtype=int
     )
     node_attrs_ = {gcnn.atomic.ATOMIC_NUMBERS: atomic_numbers}
     if node_attrs:
         for key in node_attrs:
             if isinstance(key, str):
                 label = key
-            elif isinstance(key, tuple):
+            elif isinstance(key, (tuple, list)):
                 key, label = key
             else:
                 raise ValueError(f"Not attributes key must be str or tuple, got {type(key)}")
@@ -241,7 +241,7 @@ def to_graph(
         for key in graph_attrs:
             if isinstance(key, str):
                 label = key
-            elif isinstance(key, tuple):
+            elif isinstance(key, (tuple, list)):
                 key, label = key
             else:
                 raise ValueError(f"Not attributes key must be str or tuple, got {type(key)}")

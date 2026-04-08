@@ -12,6 +12,8 @@ import reax
 import reax.utils
 from typing_extensions import NotRequired, override
 
+from ..gcnn.data import _graph_padding
+
 __all__ = ("ReaxModule",)
 
 MetricsDict = dict[str, reax.Metric | str]
@@ -122,6 +124,8 @@ class ReaxModule(reax.Module[jraph.GraphsTuple, jraph.GraphsTuple]):
         self, batch: tuple[jraph.GraphsTuple, jraph.GraphsTuple], _batch_idx: int, /
     ) -> StepOutput:
         inputs, targets = self._prep_batch(batch)
+        batch_size = _get_batch_size(inputs)
+
         (loss, outs), grads = jax.value_and_grad(self.step, argnums=0, has_aux=True)(
             self.parameters(),
             inputs,
@@ -131,9 +135,17 @@ class ReaxModule(reax.Module[jraph.GraphsTuple, jraph.GraphsTuple]):
             self._metrics,
             self._output,
         )
+
+        # Metrics
         metrics = outs.get("metrics")
         self.log(
-            "train/loss", loss, on_step=False, on_epoch=True, logger=True, prog_bar=metrics is None
+            "train/loss",
+            loss,
+            on_step=False,
+            on_epoch=True,
+            logger=True,
+            prog_bar=metrics is None,
+            batch_size=batch_size,
         )
 
         if metrics is not None:
@@ -146,6 +158,7 @@ class ReaxModule(reax.Module[jraph.GraphsTuple, jraph.GraphsTuple]):
                     on_epoch=True,
                     logger=True,
                     prog_bar=True,
+                    batch_size=batch_size,
                 )
 
         step_out = {"loss": loss, "grad": grads}
@@ -161,6 +174,8 @@ class ReaxModule(reax.Module[jraph.GraphsTuple, jraph.GraphsTuple]):
         self, batch: tuple[jraph.GraphsTuple, jraph.GraphsTuple], _batch_idx: int, /
     ) -> StepOutput | None:
         inputs, targets = self._prep_batch(batch)
+        batch_size = _get_batch_size(inputs)
+
         loss, outs = self.step(
             self.parameters(),
             inputs,
@@ -170,9 +185,17 @@ class ReaxModule(reax.Module[jraph.GraphsTuple, jraph.GraphsTuple]):
             self._metrics,
             self._output,
         )
+
+        # Metrics
         metrics = outs.get("metrics")
         self.log(
-            "val/loss", loss, on_step=False, on_epoch=True, logger=True, prog_bar=metrics is None
+            "val/loss",
+            loss,
+            on_step=False,
+            on_epoch=True,
+            logger=True,
+            prog_bar=metrics is None,
+            batch_size=batch_size,
         )
 
         if metrics is not None:
@@ -185,6 +208,7 @@ class ReaxModule(reax.Module[jraph.GraphsTuple, jraph.GraphsTuple]):
                     on_epoch=True,
                     logger=True,
                     prog_bar=True,
+                    batch_size=batch_size,
                 )
 
         if not self._output:
@@ -203,6 +227,8 @@ class ReaxModule(reax.Module[jraph.GraphsTuple, jraph.GraphsTuple]):
         self, batch: tuple[jraph.GraphsTuple, jraph.GraphsTuple], _batch_idx: int, /
     ) -> StepOutput | None:
         inputs, targets = self._prep_batch(batch)
+        batch_size = _get_batch_size(inputs)
+
         loss, outs = self.step(
             self.parameters(),
             inputs,
@@ -212,9 +238,17 @@ class ReaxModule(reax.Module[jraph.GraphsTuple, jraph.GraphsTuple]):
             self._metrics,
             self._output,
         )
+
+        # Metrics
         metrics = outs.get("metrics")
         self.log(
-            "test/loss", loss, on_step=False, on_epoch=True, logger=True, prog_bar=metrics is None
+            "test/loss",
+            loss,
+            on_step=False,
+            on_epoch=True,
+            logger=True,
+            prog_bar=metrics is None,
+            batch_size=batch_size,
         )
 
         if metrics is not None:
@@ -227,6 +261,7 @@ class ReaxModule(reax.Module[jraph.GraphsTuple, jraph.GraphsTuple]):
                     on_epoch=True,
                     logger=True,
                     prog_bar=True,
+                    batch_size=batch_size,
                 )
 
         if not self._output:
@@ -299,3 +334,15 @@ class ReaxModule(reax.Module[jraph.GraphsTuple, jraph.GraphsTuple]):
                 inputs, outputs = batch
 
         return inputs, outputs
+
+
+def _get_batch_size(inputs: jraph.GraphsTuple | Any):
+    if not isinstance(inputs, jraph.GraphsTuple):
+        return None
+
+    try:
+        mask = inputs.globals["mask"]
+    except KeyError:
+        mask = _graph_padding.get_graph_padding_mask(inputs)
+
+    return mask.sum()

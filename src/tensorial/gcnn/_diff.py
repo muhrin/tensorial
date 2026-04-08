@@ -287,6 +287,8 @@ class SingleDerivative(Derivative):
             diff_fn = jax.grad
         else:
             # Vector valued
+            # note: we could use forward mode in cases where dim inputs << outputs
+            # but the memory use is often exterme
             diff_fn = jax.jacrev
 
         def _diff_and_pre_process(
@@ -519,6 +521,7 @@ class Evaluator:
 def diff(
     *func_of,
     wrt: GraphEntrySpecLike | Sequence[GraphEntrySpecLike],
+    of: GraphEntrySpecLike | None = None,
     out: GraphEntrySpecLike = None,
     scale: float = 1.0,
     at: dict | None = None,
@@ -578,11 +581,15 @@ def diff(
         conventions for Graph entry keys and indices. For multi-derivatives, the
         number of unique indices in 'out' must match the number of indices in 'wrt'.
     """
-    of: GraphEntrySpecLike | None
-
     if len(func_of) == 1:
-        func, of = func_of[0], None
+        func = func_of[0]
     else:
+        if of is not None:
+            raise ValueError(
+                "You need to call diff() as either diff(fn, 'globals.energy', ...) or "
+                "diff(fn, of='globals.energy', ...) but you cannot provide both 2 positional "
+                "arguments and `of`"
+            )
         func, of = func_of
 
     if isinstance(wrt, str):

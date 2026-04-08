@@ -4,6 +4,8 @@ from .gcnn import keys
 
 
 def determine_graph_batch_size(graphs: jraph.GraphsTuple):
+    # TODO: This function is not right. Both implicit and explicit should have the same behaviour
+    # TODO: wrt to whether they are mask aware or not
     if len(graphs.n_node.shape) > 1:
         # explicit batching
         if isinstance(graphs.globals, dict) and (keys.MASK in graphs.globals):

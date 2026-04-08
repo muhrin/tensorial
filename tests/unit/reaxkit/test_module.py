@@ -29,7 +29,8 @@ def test_module_outputs(output):
             batch_idx: int,
             /,
         ) -> None:
-            self.val_outputs.append(outputs)
+            if not trainer.sanity_checking:
+                self.val_outputs.append(outputs)
 
     module = reaxkit.ReaxModule(
         DummyModel(),
@@ -42,10 +43,10 @@ def test_module_outputs(output):
     trainer = reax.Trainer(listeners=listener)
 
     dataset = np.random.rand(2, 10)
-    trainer.fit(module, train_dataloaders=dataset, val_dataloaders=dataset)
+    trainer.fit(module, train_dataloaders=dataset, val_dataloaders=dataset, max_epochs=1)
 
     if output is None:
-        assert listener.val_outputs == [None]
+        assert listener.val_outputs == [None, None]
     elif isinstance(output, str):
         assert output in listener.val_outputs[0]
     else:

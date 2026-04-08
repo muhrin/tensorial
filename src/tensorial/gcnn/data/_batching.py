@@ -11,7 +11,7 @@ import numpy as np
 from pytray import tree
 import reax
 
-from . import _common
+from . import _common, _graph_padding
 from .. import keys, utils
 from ... import utils as tensorial_utils
 
@@ -106,21 +106,15 @@ def add_padding_mask(
     # Create the masks that we have been asked to add
     masks = {}
     if what & _common.GraphAttributes.NODES:
-        mask = jraph.get_node_padding_mask(graph)
-        if not isinstance(mask, np_.ndarray):
-            mask = np_.array(mask)
+        mask = _graph_padding.get_node_padding_mask(graph, np_=np_)
         masks["nodes"] = mask
 
     if what & _common.GraphAttributes.EDGES:
-        mask = jraph.get_edge_padding_mask(graph)
-        if not isinstance(mask, np_.ndarray):
-            mask = np_.array(mask)
+        mask = _graph_padding.get_edge_padding_mask(graph, np_=np_)
         masks["edges"] = mask
 
     if what & _common.GraphAttributes.GLOBALS:
-        mask = jraph.get_graph_padding_mask(graph)
-        if not isinstance(mask, np_.ndarray):
-            mask = np_.array(mask)
+        mask = _graph_padding.get_graph_padding_mask(graph, np_=np_)
         masks["globals"] = mask
 
     for key, mask in masks.items():
