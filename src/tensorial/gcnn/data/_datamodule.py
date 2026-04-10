@@ -36,6 +36,7 @@ class GraphDataModule(reax.DataModule):
         # Params
         self._train_val_test_split: Final[tuple[int | float, ...]] = tuple(train_val_test_split)
         self._batch_size: Final[int] = batch_size
+        self._batch_mode: "Final[gcnn.data.BatchMode]" = _common.BatchMode(batch_mode)
 
         # State
         self._dataloader = dataset
@@ -44,7 +45,6 @@ class GraphDataModule(reax.DataModule):
         self.data_val: Dataset | None = None
         self.data_test: Dataset | None = None
         self._max_padding: "gcnn.data.GraphPadding | None" = None
-        self._batch_mode = batch_mode
 
     @override
     def setup(self, stage: "reax.Stage", /) -> None:

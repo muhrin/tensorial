@@ -1,5 +1,5 @@
 from collections.abc import Callable, Sequence
-from typing import Any, Final, TypedDict, cast
+from typing import Any, Final, TypedDict, TypeVar, cast
 
 import beartype
 import equinox as eqx
@@ -16,18 +16,21 @@ from ..gcnn.data import _graph_padding
 
 __all__ = ("ReaxModule",)
 
+OutputT_co = TypeVar("OutputT_co", covariant=True)
+InputT = TypeVar("InputT")
+
 MetricsDict = dict[str, reax.Metric | str]
-LossFn = Callable[[jraph.GraphsTuple, jraph.GraphsTuple], jax.Array]
+LossFn = Callable[[OutputT_co, InputT], jax.Array]
 Optimizer = optax.GradientTransformation | Callable[[], optax.GradientTransformation]
 
 
 class StepOutput(TypedDict):
     loss: NotRequired[jt.Array]
-    targets: NotRequired[jraph.GraphsTuple]
-    predictions: NotRequired[jraph.GraphsTuple]
+    targets: NotRequired[OutputT_co]
+    predictions: NotRequired[OutputT_co]
 
 
-class ReaxModule(reax.Module[jraph.GraphsTuple, jraph.GraphsTuple]):
+class ReaxModule(reax.Module[InputT, OutputT_co]):
     """Tensorial REAX module."""
 
     # pylint: disable=method-hidden
@@ -55,21 +58,21 @@ class ReaxModule(reax.Module[jraph.GraphsTuple, jraph.GraphsTuple]):
             metrics if metrics is None else reax.metrics.build_collection(metrics)
         )
         self._output: Final[tuple[str, ...]] = self._init_output(output)
+        self._loss_fn: Final[LossFn] = loss_fn
+        self._model: Final[linen.Module] = model
 
         # State
-        self._model = model
-        self._loss_fn = loss_fn
         self._optimizer = optimizer
         self._scheduler = scheduler
-        self._debug = False
+        self._debug: bool = False
         if jit:
             if donate_graph:
                 self.step = eqx.filter_jit(donate="all-except-first")(self.step)
             else:
                 self.step = eqx.filter_jit(self.step)
 
-            self.calculate_metrics = eqx.filter_jit(donate="all")(self.calculate_metrics)
-            self._forward = eqx.filter_jit(donate="all")(self._forward)
+        self.calculate_metrics = eqx.filter_jit(donate="all")(self.calculate_metrics)
+        self._forward = eqx.filter_jit(donate="all")(self._forward)
 
     @staticmethod
     def _init_output(output) -> tuple[str]:
@@ -120,9 +123,7 @@ class ReaxModule(reax.Module[jraph.GraphsTuple, jraph.GraphsTuple]):
         return self._optimizer, state
 
     @override
-    def training_step(
-        self, batch: tuple[jraph.GraphsTuple, jraph.GraphsTuple], _batch_idx: int, /
-    ) -> StepOutput:
+    def training_step(self, batch: tuple[InputT, OutputT_co], _batch_idx: int, /) -> StepOutput:
         inputs, targets = self._prep_batch(batch)
         batch_size = _get_batch_size(inputs)
 
@@ -171,7 +172,7 @@ class ReaxModule(reax.Module[jraph.GraphsTuple, jraph.GraphsTuple]):
 
     @override
     def validation_step(
-        self, batch: tuple[jraph.GraphsTuple, jraph.GraphsTuple], _batch_idx: int, /
+        self, batch: tuple[InputT, OutputT_co], _batch_idx: int, /
     ) -> StepOutput | None:
         inputs, targets = self._prep_batch(batch)
         batch_size = _get_batch_size(inputs)
@@ -223,9 +224,7 @@ class ReaxModule(reax.Module[jraph.GraphsTuple, jraph.GraphsTuple]):
         return step_out
 
     @override
-    def test_step(
-        self, batch: tuple[jraph.GraphsTuple, jraph.GraphsTuple], _batch_idx: int, /
-    ) -> StepOutput | None:
+    def test_step(self, batch: tuple[InputT, OutputT_co], _batch_idx: int, /) -> StepOutput | None:
         inputs, targets = self._prep_batch(batch)
         batch_size = _get_batch_size(inputs)
 
@@ -276,25 +275,23 @@ class ReaxModule(reax.Module[jraph.GraphsTuple, jraph.GraphsTuple]):
         return step_out
 
     @override
-    def predict_step(self, batch: jraph.GraphsTuple, _batch_idx: int, /) -> jraph.GraphsTuple:
+    def predict_step(self, batch: InputT, _batch_idx: int, /) -> OutputT_co:
         inputs, _outputs = self._prep_batch(batch)
         return self._forward(self.parameters(), inputs, self._model.apply)
 
     @staticmethod
     def _forward(
-        params: jt.PyTree,
-        inputs: jraph.GraphsTuple,
-        model: Callable[[jt.PyTree, jraph.GraphsTuple], jraph.GraphsTuple],
-    ) -> jraph.GraphsTuple:
+        params: jt.PyTree, inputs: InputT, model: Callable[[jt.PyTree, InputT], OutputT_co]
+    ) -> OutputT_co:
         return model(params, inputs)
 
     @staticmethod
     def step(
         params: jt.PyTree,
-        inputs: jraph.GraphsTuple,
-        _targets: jraph.GraphsTuple,
-        model: Callable[[jt.PyTree, jraph.GraphsTuple], jraph.GraphsTuple],
-        loss_fn: Callable,
+        inputs: InputT,
+        _targets: OutputT_co,
+        model: Callable[[jt.PyTree, InputT], OutputT_co],
+        loss_fn: LossFn,
         metrics: reax.metrics.MetricCollection | None = None,
         output: tuple[str, ...] = tuple(),
     ) -> tuple[jax.Array, dict]:
@@ -320,11 +317,11 @@ class ReaxModule(reax.Module[jraph.GraphsTuple, jraph.GraphsTuple]):
 
     @staticmethod
     def calculate_metrics(
-        predictions: jraph.GraphsTuple, targets: jraph.GraphsTuple, metrics: MetricsDict
+        predictions: OutputT_co, targets: OutputT_co, metrics: MetricsDict
     ) -> dict[str, reax.Metric]:
         return {key: metric.create(predictions, targets) for key, metric in metrics.items()}
 
-    def _prep_batch(self, batch) -> tuple[jraph.GraphsTuple, jraph.GraphsTuple | None]:
+    def _prep_batch(self, batch) -> tuple[InputT, OutputT_co | None]:
         if isinstance(batch, jraph.GraphsTuple):
             inputs = outputs = batch
         else:
@@ -336,7 +333,7 @@ class ReaxModule(reax.Module[jraph.GraphsTuple, jraph.GraphsTuple]):
         return inputs, outputs
 
 
-def _get_batch_size(inputs: jraph.GraphsTuple | Any):
+def _get_batch_size(inputs: InputT):
     if not isinstance(inputs, jraph.GraphsTuple):
         return None
 
