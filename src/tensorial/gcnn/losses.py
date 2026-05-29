@@ -7,6 +7,7 @@ import equinox
 import jax
 import jax.numpy as jnp
 import jaxtyping as jt
+from jaxtyping import Array, Bool, Float, Int
 import jraph
 import optax.losses
 from pytray import tree
@@ -125,15 +126,13 @@ class Loss(GraphLoss):
             else:
                 mask = mask & user_mask
 
-        graph_mask: jt.Bool[jax.Array, "n_graph ..."] | None = targets.globals.get(keys.MASK)
+        graph_mask: Bool[jax.Array, "n_graph ..."] | None = targets.globals.get(keys.MASK)
 
         root: str = self._target_field[0]
         if root in ("nodes", "edges"):
-            segments: jt.Int[jax.Array, "n_graph"] = (
-                targets.n_node if root == "nodes" else targets.n_edge
-            )
+            segments: Int[Array, "n_graph"] = targets.n_node if root == "nodes" else targets.n_edge
 
-            loss: jt.Float[jax.Array, "n_graph ..."] = graph_ops.segment_reduce(
+            loss: Float[Array, "n_graph ..."] = graph_ops.segment_reduce(
                 loss, segments, reduction=self._reduction, mask=mask, segment_mask=graph_mask
             )
 

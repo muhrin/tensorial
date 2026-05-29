@@ -5,6 +5,7 @@ import equinox
 import jax
 import jax.numpy as jnp
 import jaxtyping as jt
+from jaxtyping import Int
 import jraph
 
 from tensorial.typing import Array
@@ -23,14 +24,14 @@ class SpeciesTransform(equinox.Module):
     position in the list
     """
 
-    atomic_numbers: jt.Int[jax.Array, "numbers"]
+    atomic_numbers: Int[jax.Array, "numbers"]
     field: str = keys.ATOMIC_NUMBERS
     out_field: str = gcnn_keys.SPECIES
 
     @jt.jaxtyped(typechecker=beartype.beartype)
     def __init__(
         self,
-        atomic_numbers: Sequence[int] | jt.Int[Array, "numbers"],
+        atomic_numbers: Sequence[int] | Int[Array, "numbers"],
         field: str = keys.ATOMIC_NUMBERS,
         out_field: str = gcnn_keys.SPECIES,
     ):

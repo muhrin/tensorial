@@ -4,7 +4,7 @@ from typing import Final
 
 import e3nn_jax as e3j
 import jax.numpy as jnp
-import jaxtyping as jt
+from jaxtyping import Float, Num
 import jraph
 import numpy as np
 import reax.metrics
@@ -20,7 +20,7 @@ __all__ = ("graph_from_points", "with_edge_vectors")
 
 
 def graph_from_points(
-    pos: jt.Float[Array, "n_nodes 3"],
+    pos: Float[Array, "n_nodes 3"],
     r_max: numbers.Number,
     *,
     fractional_positions: bool = False,
@@ -28,7 +28,7 @@ def graph_from_points(
     strict_self_interaction: bool = False,
     cell: CellType | None = None,
     pbc: bool | PbcType | None = None,
-    nodes: dict[str, jt.Num[Array, "n_nodes *"]] | None = None,
+    nodes: dict[str, Num[Array, "n_nodes *"]] | None = None,
     edges: dict | None = None,
     graph_globals: dict[str, Array] | None = None,
     np_=np,

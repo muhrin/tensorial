@@ -3,7 +3,7 @@ from typing import Annotated, Generic, TypeVar, Union
 
 import e3nn_jax as e3j
 import jax.typing
-import jaxtyping as jt
+from jaxtyping import Bool, Float, Int
 import numpy as np
 
 __all__ = (
@@ -44,17 +44,15 @@ IntoIrreps = Union[
     Sequence[str | e3j.Irrep | e3j.MulIrrep | tuple[int, "IntoIrreps"]],
 ]
 # "IrrepsArray with explicit shape"
-IrrepsArrayShape = _Helper(e3j.IrrepsArray, jt.Float)
+IrrepsArrayShape = _Helper(e3j.IrrepsArray, Float)
 
 
 Array = Union[jax.Array, np.ndarray]
 ArrayType = Union[jax.Array, np.ndarray]
 # "Integer array that is used as an index"
-IndexArray = _Helper(Array, jt.Int)  # pylint: disable=invalid-name
-CellType = Annotated[
-    jt.Float[ArrayType, "3 3"], "Unit cell array i.e. rows containing cell vectors"
-]
+IndexArray = _Helper(Array, Int)  # pylint: disable=invalid-name
+CellType = Annotated[Float[ArrayType, "3 3"], "Unit cell array i.e. rows containing cell vectors"]
 PbcType = Annotated[
-    tuple[bool, bool, bool] | jt.Bool[jax.typing.ArrayLike, "3"],
+    tuple[bool, bool, bool] | Bool[jax.typing.ArrayLike, "3"],
     "Boolean sequence indicating whether boundaries are periodic in each a, b, c directions",
 ]

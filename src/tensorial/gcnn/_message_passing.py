@@ -3,6 +3,7 @@ import e3nn_jax as e3j
 from flax import linen
 import jax.numpy as jnp
 import jaxtyping as jt
+from jaxtyping import Bool, Float, Int
 import reax.metrics
 
 from tensorial import nn_utils
@@ -31,12 +32,12 @@ class MessagePassingConvolution(linen.Module):
         self,
         node_feats: IrrepsArrayShape["n_node node_irreps"],
         edge_features: IrrepsArrayShape["n_edge edge_irreps"],
-        radial_embedding: jt.Float[Array, "n_edge radial_embedding_dim"],
+        radial_embedding: Float[Array, "n_edge radial_embedding_dim"],
         senders: IndexArray["n_edge"],
         receivers: IndexArray["n_edge"],
         *,
-        edge_mask: jt.Bool[Array, "n_edge"] | None = None,
-        node_types: jt.Int[Array, "n_node"] | None = None,
+        edge_mask: Bool[Array, "n_edge"] | None = None,
+        node_types: Int[Array, "n_node"] | None = None,
     ) -> IrrepsArrayShape["n_node node_irreps_out"]:
         """
         Performs graph convolution operations on node and edge features using tensor products and

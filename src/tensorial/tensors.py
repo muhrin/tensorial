@@ -5,8 +5,9 @@ import e3nn_jax as e3j
 import jax
 import jax.numpy as jnp
 import jaxtyping as jt
+from jaxtyping import Array, Float, Int
 
-from tensorial.typing import Array, IrrepsArrayShape
+from tensorial.typing import IrrepsArrayShape
 
 from . import base
 
@@ -89,9 +90,7 @@ class OneHot(base.Attr):
         raise ValueError("Expected self.irreps to contain a MulIrrep.")
 
     @jt.jaxtyped(typechecker=beartype.beartype)
-    def create_tensor(
-        self, value: jt.Int[Array, "n_vals"]
-    ) -> IrrepsArrayShape["n_node num_classes"]:
+    def create_tensor(self, value: Int[Array, "n_vals"]) -> IrrepsArrayShape["n_node num_classes"]:
         return e3j.IrrepsArray(self.irreps, jax.nn.one_hot(value, self.num_classes))
 
 
@@ -123,7 +122,7 @@ class CartesianTensor(base.Attr):
     def from_tensor(
         self,
         tensor: IrrepsArrayShape["irreps"] | IrrepsArrayShape["batch irreps"],
-    ) -> jt.Float[jax.Array, "..."] | jt.Float[jax.Array, "batch ..."]:
+    ) -> Float[jax.Array, "..."] | Float[jax.Array, "batch ..."]:
         """Take an irrep tensor and perform the change of basis transformation back to a Cartesian
         tensor
 

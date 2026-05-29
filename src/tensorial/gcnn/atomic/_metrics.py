@@ -4,6 +4,7 @@ import beartype
 import jax
 import jax.numpy as jnp
 import jaxtyping as jt
+from jaxtyping import Bool, Float, Int
 import jraph
 from pytray import tree
 import reax
@@ -83,10 +84,10 @@ class TypeContributionLstsq(reax.metrics.Metric[Array]):
     """
 
     # XtX: The Gram Matrix (A.T @ A) -> Shape: (n_types, n_types)
-    xtx: jt.Float[jax.Array, "n_types n_types"] | None = None
+    xtx: Float[jax.Array, "n_types n_types"] | None = None
 
     # Xty: The Moment Vector (A.T @ b) -> Shape: (n_types, ...)
-    xty: jt.Float[jax.Array, "n_types ..."] | None = None
+    xty: Float[jax.Array, "n_types ..."] | None = None
 
     @property
     def is_empty(self):
@@ -102,9 +103,9 @@ class TypeContributionLstsq(reax.metrics.Metric[Array]):
     @override
     def create(  # pylint: disable=arguments-differ
         cls,
-        type_counts: jt.Int[Array, "batch_size n_types"] | jt.Float[Array, "batch_size n_types"],
-        values: jt.Float[Array, "batch_size ..."],
-        mask: jt.Bool[Array, "batch_size"] | None = None,
+        type_counts: Int[Array, "batch_size n_types"] | Float[Array, "batch_size n_types"],
+        values: Float[Array, "batch_size ..."],
+        mask: Bool[Array, "batch_size"] | None = None,
         /,
     ) -> "TypeContributionLstsq":
         np_ = utils.infer_backend(type_counts)
@@ -151,9 +152,9 @@ class TypeContributionLstsq(reax.metrics.Metric[Array]):
     @override
     def update(  # pylint: disable=arguments-differ
         self,
-        type_counts: jt.Int[Array, "batch_size n_types"] | jt.Float[Array, "batch_size n_types"],
-        values: jt.Float[Array, "batch_size ..."],
-        mask: jt.Bool[Array, "batch_size"] | None = None,
+        type_counts: Int[Array, "batch_size n_types"] | Float[Array, "batch_size n_types"],
+        values: Float[Array, "batch_size ..."],
+        mask: Bool[Array, "batch_size"] | None = None,
         /,
     ) -> "TypeContributionLstsq":
         # Calculate stats for the incoming batch
@@ -218,7 +219,7 @@ class TypeContributionLstsq(reax.metrics.Metric[Array]):
 
 
 class EnergyContributionLstsq(reax.Metric):
-    _type_map: jt.Array
+    _type_map: Array
     _metric: TypeContributionLstsq | None = None
 
     def __init__(self, type_map: Sequence | Array, metric: TypeContributionLstsq = None):
@@ -272,9 +273,9 @@ class EnergyContributionLstsq(reax.Metric):
 
     @jt.jaxtyped(typechecker=beartype.beartype)
     def _fun(self, graphs: jraph.GraphsTuple, *_) -> tuple[
-        jt.Float[Array, "batch_size k"],
-        jt.Float[Array, "batch_size 1"],
-        jt.Bool[Array, "batch_size"] | None,
+        Float[Array, "batch_size k"],
+        Float[Array, "batch_size 1"],
+        Bool[Array, "batch_size"] | None,
     ]:
         graph_dict = graphs._asdict()
         num_nodes = graphs.n_node
@@ -326,7 +327,7 @@ class AvgNumNeighboursByAtomType(metrics.AvgNumNeighboursByType):
     @jt.jaxtyped(typechecker=beartype.beartype)
     def __init__(
         self,
-        atom_types: Sequence[int] | jt.Int[Array, "n_types"],
+        atom_types: Sequence[int] | Int[Array, "n_types"],
         type_field: str = keys.ATOMIC_NUMBERS,
         state: metrics.AvgNumNeighboursByType.Averages | None = None,
     ):

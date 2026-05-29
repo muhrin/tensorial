@@ -5,6 +5,7 @@ import beartype
 import e3nn_jax as e3j
 from flax import linen
 import jaxtyping as jt
+from jaxtyping import Bool, Float, Int
 import jraph
 
 from tensorial.typing import Array, IndexArray, IntoIrreps, IrrepsArrayShape
@@ -77,13 +78,13 @@ class InteractionBlock(linen.Module):
         self,
         node_features: IrrepsArrayShape["n_node irreps"],
         edge_features: IrrepsArrayShape["n_edge edge_irreps"],
-        radial_embedding: jt.Float[Array, "n_edge radial_embedding_dim"],
+        radial_embedding: Float[Array, "n_edge radial_embedding_dim"],
         senders: IndexArray["n_edge"],
         receivers: IndexArray["n_edge"],
-        node_species: jt.Int[Array, "n_node"] | None = None,
+        node_species: Int[Array, "n_node"] | None = None,
         *,
-        node_mask: jt.Bool[Array, "n_node"] | None = None,
-        edge_mask: jt.Bool[Array, "n_edge"] | None = None,
+        node_mask: Bool[Array, "n_node"] | None = None,
+        edge_mask: Bool[Array, "n_edge"] | None = None,
     ) -> e3j.IrrepsArray:
         """A NequIP interaction made up of the following steps:
 

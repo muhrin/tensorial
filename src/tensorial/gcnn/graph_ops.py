@@ -3,7 +3,7 @@ from typing import Literal
 import e3nn_jax as e3j
 import jax
 import jax.numpy as jnp
-import jaxtyping as jt
+from jaxtyping import Bool, Float, Int
 import jraph
 from pytray import tree
 
@@ -21,12 +21,12 @@ __all__ = (
 
 
 def _prepare_segments(
-    segment_sizes: jt.Int[jax.Array, "num_segments"], total_repeat_length: int
-) -> tuple[int, jt.Int[jax.Array, "total_repeat_length"]]:
+    segment_sizes: Int[jax.Array, "num_segments"], total_repeat_length: int
+) -> tuple[int, Int[jax.Array, "total_repeat_length"]]:
     num_segments: int = segment_sizes.shape[0]
 
     # 1. Generate segment IDs (map each data point to its graph index)
-    segment_ids: jt.Int[jax.Array, "num_segments"] = jnp.arange(num_segments)
+    segment_ids: Int[jax.Array, "num_segments"] = jnp.arange(num_segments)
     # total_repeat_length ensures correct size even with padding/dynamic shapes
     segment_ids = jnp.repeat(
         segment_ids, segment_sizes, axis=0, total_repeat_length=total_repeat_length
@@ -36,11 +36,11 @@ def _prepare_segments(
 
 
 def segment_sum(
-    data: jt.Float[jax.Array, "N ..."],
-    segment_sizes: jt.Int[jax.Array, "num_segments"],
-    mask: jt.Bool[jax.Array, "N ..."] | None = None,
-    segment_mask: jt.Bool[jax.Array, "num_segments"] | None = None,
-) -> jt.Float[jax.Array, "num_segments ..."]:
+    data: Float[jax.Array, "N ..."],
+    segment_sizes: Int[jax.Array, "num_segments"],
+    mask: Bool[jax.Array, "N ..."] | None = None,
+    segment_mask: Bool[jax.Array, "num_segments"] | None = None,
+) -> Float[jax.Array, "num_segments ..."]:
     """Performs a masked segment sum reduction over batched graph data.
 
     This function is JAX-jittable and handles the logic for applying a mask
@@ -86,11 +86,11 @@ def segment_sum(
 
 
 def segment_mean(
-    data: jt.Float[jax.Array, "N ..."],
-    segment_sizes: jt.Int[jax.Array, "num_segments"],
-    mask: jt.Bool[jax.Array, "N ..."] | None = None,
-    segment_mask: jt.Bool[jax.Array, "num_segments"] | None = None,
-) -> jt.Float[jax.Array, "num_segments ..."]:
+    data: Float[jax.Array, "N ..."],
+    segment_sizes: Int[jax.Array, "num_segments"],
+    mask: Bool[jax.Array, "N ..."] | None = None,
+    segment_mask: Bool[jax.Array, "num_segments"] | None = None,
+) -> Float[jax.Array, "num_segments ..."]:
     """Performs a masked segment mean reduction over batched graph data.
 
     Args:
@@ -159,11 +159,11 @@ def segment_mean(
 
 
 def segment_min(
-    data: jt.Float[jax.Array, "N ..."],
-    segment_sizes: jt.Int[jax.Array, "num_segments"],
-    mask: jt.Bool[jax.Array, "N ..."] | None = None,
-    segment_mask: jt.Bool[jax.Array, "num_segments"] | None = None,
-) -> jt.Float[jax.Array, "num_segments ..."]:
+    data: Float[jax.Array, "N ..."],
+    segment_sizes: Int[jax.Array, "num_segments"],
+    mask: Bool[jax.Array, "N ..."] | None = None,
+    segment_mask: Bool[jax.Array, "num_segments"] | None = None,
+) -> Float[jax.Array, "num_segments ..."]:
     """Performs a masked segment minimum reduction over batched graph data.
 
     Args:
@@ -211,11 +211,11 @@ def segment_min(
 
 
 def segment_max(
-    data: jt.Float[jax.Array, "N ..."],
-    segment_sizes: jt.Int[jax.Array, "num_segments"],
-    mask: jt.Bool[jax.Array, "N ..."] | None = None,
-    segment_mask: jt.Bool[jax.Array, "num_segments"] | None = None,
-) -> jt.Float[jax.Array, "num_segments ..."]:
+    data: Float[jax.Array, "N ..."],
+    segment_sizes: Int[jax.Array, "num_segments"],
+    mask: Bool[jax.Array, "N ..."] | None = None,
+    segment_mask: Bool[jax.Array, "num_segments"] | None = None,
+) -> Float[jax.Array, "num_segments ..."]:
     """Performs a masked segment maximum reduction over batched graph data.
 
     Args:
@@ -271,12 +271,12 @@ _REDUCTIONS = {
 
 
 def segment_reduce(
-    data: jt.Float[jax.Array | e3j.IrrepsArray, "N ..."],
-    segment_sizes: jt.Int[jax.Array, "num_segments"],
+    data: Float[jax.Array | e3j.IrrepsArray, "N ..."],
+    segment_sizes: Int[jax.Array, "num_segments"],
     reduction: Literal["sum", "mean", "min", "max"],
-    mask: jt.Bool[jax.Array, "N ..."] | None = None,
-    segment_mask: jt.Bool[jax.Array, "num_segments"] | None = None,
-) -> jt.Float[jax.Array, "num_segments ..."]:
+    mask: Bool[jax.Array, "N ..."] | None = None,
+    segment_mask: Bool[jax.Array, "num_segments"] | None = None,
+) -> Float[jax.Array, "num_segments ..."]:
     """Performs a masked segment reduction over batched graph data.
 
     This function is JAX-jittable and handles the logic for applying a mask
@@ -311,7 +311,7 @@ def graph_segment_reduce(
     graph: jraph.GraphsTuple | dict,
     path: "gcnn.typing.TreePathLike",
     reduction: str = "sum",
-) -> jt.Float[jax.Array, "num_segments ..."] | e3j.IrrepsArray:
+) -> Float[jax.Array, "num_segments ..."] | e3j.IrrepsArray:
     if isinstance(graph, jraph.GraphsTuple):
         graph_dict = graph._asdict()
     else:
@@ -342,7 +342,7 @@ def _jraph_segment(
     indices_are_sorted: bool = False,
     unique_indices: bool = False,
     reduction: str = "sum",
-) -> jt.Float[jax.Array, "num_segments ..."] | e3j.IrrepsArray:
+) -> Float[jax.Array, "num_segments ..."] | e3j.IrrepsArray:
     try:
         op = getattr(jraph, f"segment_{reduction}")
     except AttributeError:

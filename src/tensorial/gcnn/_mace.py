@@ -9,10 +9,11 @@ from flax import linen
 import jax
 import jax.numpy as jnp
 import jaxtyping as jt
+from jaxtyping import Array, Bool, Float, Int
 import jraph
 
 from tensorial import gcnn, nn_utils
-from tensorial.typing import Array, IndexArray, IntoIrreps, IrrepLike, IrrepsArrayShape
+from tensorial.typing import IndexArray, IntoIrreps, IrrepLike, IrrepsArrayShape
 
 from . import _base, _message_passing, experimental, keys
 
@@ -94,7 +95,7 @@ class SymmetricContraction(linen.Module):
         Returns:
             the contraction outputs
         """
-        outputs: dict[e3j.Irrep, jt.Array] = dict()
+        outputs: dict[e3j.Irrep, Array] = dict()
         for order in range(self.correlation_order, 0, -1):  # correlation_order, ..., 1
             if self.off_diagonal:
                 inp = jnp.roll(inputs.array, A025582[order - 1])
@@ -116,11 +117,11 @@ class SymmetricContraction(linen.Module):
             #       out
 
             for (mul, ir_out), basis_fn in zip(basis.irreps, basis.chunks):
-                basis_fn: jt.Float[Array, "irreps_in^order multiplicity irreps_out"] = (
-                    basis_fn.astype(inp.dtype)
+                basis_fn: Float[Array, "irreps_in^order multiplicity irreps_out"] = basis_fn.astype(
+                    inp.dtype
                 )
 
-                weights: jt.Float[Array, "multiplicity num_features"] = self.param(
+                weights: Float[Array, "multiplicity num_features"] = self.param(
                     f"w{order}_{ir_out}",
                     linen.initializers.normal(
                         stddev=(mul**-0.5) ** (1.0 - self._gradient_normalisation)
@@ -153,7 +154,7 @@ class SymmetricContraction(linen.Module):
                     outputs[ir_out] = val[1]
                     continue  # already done (special case optimisation above)
 
-                value: jt.Float[Array, "num_features irreps_in^(oder-1) irreps_out"] = jnp.einsum(
+                value: Float[Array, "num_features irreps_in^(oder-1) irreps_out"] = jnp.einsum(
                     "c...ji,cj->c...i", outputs[ir_out], inp
                 )
                 outputs[ir_out] = value
@@ -221,11 +222,11 @@ class InteractionBlock(linen.Module):
         self,
         node_features: IrrepsArrayShape["n_node node_irreps"],
         edge_features: IrrepsArrayShape["n_edge edge_irreps"],
-        radial_embedding: jt.Float[jnp.ndarray, "n_edge radial_embeddings"],
-        senders: jt.Int[Array, "n_edge"],
-        receivers: jt.Int[Array, "n_edge"],
+        radial_embedding: Float[jnp.ndarray, "n_edge radial_embeddings"],
+        senders: Int[Array, "n_edge"],
+        receivers: Int[Array, "n_edge"],
         *,
-        edge_mask: jt.Bool[Array, "n_edge"] | None = None,
+        edge_mask: Bool[Array, "n_edge"] | None = None,
     ) -> IrrepsArrayShape["n_node target_irreps"]:
         node_features = e3j.flax.Linear(node_features.irreps, name="linear_up")(node_features)
 
@@ -331,12 +332,12 @@ class MaceLayer(linen.Module):
         self,
         node_features: IrrepsArrayShape["n_node node_irreps"],
         edge_features: IrrepsArrayShape["n_edge edge_irreps"],
-        node_species: jt.Int[Array, "n_node"],  # int between 0 and num_species - 1
-        radial_embedding: jt.Float[Array, "n_edge radial_embedding"],
-        senders: jt.Int[Array, "n_edge"],
-        receivers: jt.Int[Array, "n_edge"],
+        node_species: Int[Array, "n_node"],  # int between 0 and num_species - 1
+        radial_embedding: Float[Array, "n_edge radial_embedding"],
+        senders: Int[Array, "n_edge"],
+        receivers: Int[Array, "n_edge"],
         *,
-        edge_mask: jt.Bool[Array, "n_edge"] | None = None,
+        edge_mask: Bool[Array, "n_edge"] | None = None,
     ) -> IrrepsArrayShape["n_node node_irreps_out"]:
         skip_connection: IrrepsArrayShape["n_node feature*hidden_irreps"] | None = None
         if self._skip_connection is not None:

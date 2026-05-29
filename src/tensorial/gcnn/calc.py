@@ -1,13 +1,11 @@
-import jaxtyping as jt
-
-from tensorial.typing import Array
+from jaxtyping import Array, Float
 
 from .. import utils
 
 __all__ = ("cell_volume",)
 
 
-def cell_volume(cell_vectors: jt.Float[Array, "3 3"], np_=None) -> Array:
+def cell_volume(cell_vectors: Float[Array, "3 3"], np_=None) -> Array:
     """
     Computes the volume of a unit cell defined by its cell vectors.
 

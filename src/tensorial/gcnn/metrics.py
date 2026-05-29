@@ -6,13 +6,13 @@ import beartype
 import jax.numpy as jnp
 import jax.typing
 import jaxtyping as jt
+from jaxtyping import Array, Int
 import jraph
 from pytray import tree
 import reax
 from typing_extensions import override
 
 from tensorial import nn_utils
-from tensorial.typing import Array
 
 from . import _tree, keys
 
@@ -157,13 +157,13 @@ class AvgNumNeighboursByType(reax.Metric[dict[int, jax.Array]]):
 
     Averages = list[reax.metrics.Average]
     _type_field: str
-    _node_types: jt.Int[jt.Array, "n_types"]
+    _node_types: Int[Array, "n_types"]
     _state: Averages | None
 
     @jt.jaxtyped(typechecker=beartype.beartype)
     def __init__(
         self,
-        node_types: Sequence[int] | jt.Int[Array, "n_types"],
+        node_types: Sequence[int] | Int[Array, "n_types"],
         type_field: str = "type_id",
         state: Averages | None = None,
     ):
