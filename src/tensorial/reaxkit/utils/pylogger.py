@@ -3,7 +3,7 @@ import logging
 
 from lightning_utilities.core import rank_zero
 
-__all__ = ("RankedLogger",)
+__all__ = ("RankedLogger", "RankFilter")
 
 
 def rank_prefixed_message(message: str, rank: int | None) -> str:
@@ -12,6 +12,24 @@ def rank_prefixed_message(message: str, rank: int | None) -> str:
         # specify the rank of the process being logged
         return f"[rank: {rank}] {message}"
     return message
+
+
+class RankFilter(logging.Filter):
+    UNKNOWN = "N/A"
+
+    def __init__(self, keep_rank: int | None = 0):
+        super().__init__()
+        self._keep_rank = keep_rank
+
+    def filter(self, record) -> bool:
+        # Dynamically inject 'rank' into the record object
+        # If no rank is found, default to 'N/A'
+        this_rank = getattr(rank_zero.rank_zero_only, "rank", self.UNKNOWN)
+        record.rank = this_rank
+        if self._keep_rank is not None and this_rank != self.UNKNOWN:
+            return this_rank == self._keep_rank
+
+        return True
 
 
 class RankedLogger(logging.LoggerAdapter):

@@ -1,3 +1,4 @@
+import logging
 from typing import TYPE_CHECKING, Final
 
 import hydra
@@ -6,12 +7,11 @@ import reax
 from reax.training import _checkpointing
 
 from . import keys
-from .utils import pylogger
 
 if TYPE_CHECKING:
     from tensorial import reaxkit
 
-_LOGGER = pylogger.RankedLogger(__name__, rank_zero_only=True)
+_LOGGER = logging.getLogger(__name__)
 
 
 DEFAULT_CONFIG_FILE: Final[str] = "config.yaml"

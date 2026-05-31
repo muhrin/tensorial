@@ -1,14 +1,13 @@
+import logging
 from typing import Any
 
 import jax
 from lightning_utilities.core import rank_zero
 from omegaconf import OmegaConf
 
-from . import pylogger
-
 __all__ = ("log_hyperparameters",)
 
-log = pylogger.RankedLogger(__name__, rank_zero_only=True)
+_LOGGER = logging.getLogger(__name__)
 
 
 @rank_zero.rank_zero_only
@@ -31,7 +30,7 @@ def log_hyperparameters(object_dict: dict[str, Any]) -> None:
     trainer = object_dict["trainer"]
 
     if not trainer.logger:
-        log.warning("Logger not found! Skipping hyperparameter logging...")
+        _LOGGER.warning("Logger not found! Skipping hyperparameter logging...")
         return
 
     hparams["model"] = cfg["model"]

@@ -44,7 +44,9 @@ def cube_graph() -> jraph.GraphsTuple:
     assert graph.n_node[0] == 8
     # Graph contains two edges for along each edge of the cube i.e. i->j, j->i
     assert graph.n_edge[0] == 24
-    return gcnn.with_edge_vectors(graph)
+    graph = gcnn.with_edge_vectors(graph)
+
+    return jax.tree.map(jnp.asarray, graph)
 
 
 @pytest.fixture

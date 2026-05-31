@@ -1,4 +1,5 @@
 from collections.abc import Mapping, Sequence
+import logging
 from pathlib import Path
 from typing import Final
 
@@ -10,9 +11,8 @@ from rich.prompt import Prompt
 import rich.syntax
 import rich.tree
 
-from . import pylogger
+_LOGGER = logging.getLogger(__name__)
 
-_LOGGER = pylogger.RankedLogger(__name__, rank_zero_only=True)
 TREE_STYLE: Final[str] = "dim"
 
 
@@ -126,7 +126,7 @@ def enforce_tags(cfg: omegaconf.DictConfig, save_to_file: bool = False) -> None:
         with omegaconf.open_dict(cfg):
             cfg.tags = tags
 
-        _LOGGER.info(f"Tags: {cfg.tags}")
+        _LOGGER.info("Tags: %s", cfg.tags)
 
     if save_to_file:
         with open(Path(cfg.paths.output_dir, "tags.log"), "w", encoding="utf-8") as file:

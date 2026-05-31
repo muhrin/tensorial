@@ -1,10 +1,10 @@
+import logging
+
 import hydra
 import omegaconf
 import reax
 
-from . import pylogger
-
-log = pylogger.RankedLogger(__name__, rank_zero_only=True)
+_LOGGER = logging.getLogger(__name__)
 
 
 __all__ = "instantiate_listeners", "instantiate_loggers"
@@ -25,7 +25,7 @@ def instantiate_listeners(
     listeners: list[reax.TrainerListener] = []
 
     if not listeners_cfg:
-        log.warning("No listener configs found! Skipping..")
+        _LOGGER.warning("No listener configs found! Skipping..")
         return listeners
 
     if not isinstance(listeners_cfg, omegaconf.DictConfig):
@@ -33,9 +33,9 @@ def instantiate_listeners(
 
     for _, cb_conf in listeners_cfg.items():
         if isinstance(cb_conf, omegaconf.DictConfig) and "_target_" in cb_conf:
-            log.info(
-                # pylint: disable=protected-access
-                f"Instantiating listener <{cb_conf._target_}>"
+            _LOGGER.info(
+                "Instantiating listener <%s>",
+                cb_conf._target_,  # pylint: disable=protected-access
             )
             listeners.append(hydra.utils.instantiate(cb_conf))
 
@@ -55,7 +55,7 @@ def instantiate_loggers(logger_cfg: omegaconf.DictConfig) -> list[reax.Logger]:
     logger: list[reax.Logger] = []
 
     if not logger_cfg:
-        log.warning("No logger configs found! Skipping...")
+        _LOGGER.warning("No logger configs found! Skipping...")
         return logger
 
     if not isinstance(logger_cfg, omegaconf.DictConfig):
@@ -63,9 +63,9 @@ def instantiate_loggers(logger_cfg: omegaconf.DictConfig) -> list[reax.Logger]:
 
     for _, lg_conf in logger_cfg.items():
         if isinstance(lg_conf, omegaconf.DictConfig) and "_target_" in lg_conf:
-            log.info(
-                # pylint: disable=protected-access
-                f"Instantiating logger <{lg_conf._target_}>"
+            _LOGGER.info(
+                "Instantiating logger <%s>",
+                lg_conf._target_,  # pylint: disable=protected-access
             )
             logger.append(hydra.utils.instantiate(lg_conf))
 

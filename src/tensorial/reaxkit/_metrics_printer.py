@@ -10,11 +10,9 @@ import reax
 import tqdm
 from typing_extensions import override
 
-from .utils import pylogger
-
 __all__ = ("MetricsPrinter",)
 
-_LOGGER = pylogger.RankedLogger(__name__, rank_zero_only=True)
+_LOGGER = logging.getLogger(__name__)
 
 
 MAX_PRE_DECIMAL_DIGITS: Final[int] = 4

@@ -1,3 +1,4 @@
+import logging
 import pathlib
 from typing import Any, Final
 
@@ -9,11 +10,10 @@ from typing_extensions import override
 
 from ... import base, gcnn
 from ...gcnn import _tree
-from ..utils import pylogger
 
 __all__ = ("ParityPlotter", "GraphParityPlotter")
 
-_LOGGER = pylogger.RankedLogger(__name__, rank_zero_only=True)
+_LOGGER = logging.getLogger(__name__)
 
 
 class ParityPlotter(reax.TrainerListener):

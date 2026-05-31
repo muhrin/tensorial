@@ -1,18 +1,19 @@
 from collections.abc import Callable
 from importlib.util import find_spec
+import logging
 from typing import Any
 import warnings
 
-from omegaconf import DictConfig
+import omegaconf
 
-from . import pylogger, rich_utils
+from . import rich_utils
 
 __all__ = "extras", "task_wrapper", "get_metric_value"
 
-_LOGGER = pylogger.RankedLogger(__name__, rank_zero_only=True)
+_LOGGER = logging.getLogger(__name__)
 
 
-def extras(cfg: DictConfig) -> None:
+def extras(cfg: omegaconf.DictConfig) -> None:
     """Applies optional utilities before the task is started.
 
     Utilities:
@@ -70,7 +71,7 @@ def task_wrapper(task_func: Callable) -> Callable:
         The wrapped task function.
     """
 
-    def wrap(cfg: DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
+    def wrap(cfg: omegaconf.DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
         # execute the task
         try:
             metric_dict, object_dict = task_func(cfg=cfg)
@@ -88,7 +89,7 @@ def task_wrapper(task_func: Callable) -> Callable:
         # things to always do after either success or exception
         finally:
             # display output dir path in terminal
-            _LOGGER.info(f"Output dir: {cfg.paths.output_dir}")
+            _LOGGER.info("Output dir: %s", cfg.paths.output_dir)
 
             # always close wandb run (even if exception occurs so multirun won't fail)
             if find_spec("wandb"):  # check if wandb is installed
@@ -125,6 +126,6 @@ def get_metric_value(metric_dict: dict[str, Any], metric_name: str | None) -> fl
         )
 
     metric_value = metric_dict[metric_name].item()
-    _LOGGER.info(f"Retrieved metric value! <{metric_name}={metric_value}>")
+    _LOGGER.info("Retrieved metric value! <%s=%f>", metric_name, metric_value)
 
     return metric_value

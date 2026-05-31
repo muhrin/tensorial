@@ -1,3 +1,4 @@
+import logging
 from typing import TYPE_CHECKING
 
 import hydra
@@ -9,7 +10,7 @@ from . import config, keys, utils
 if TYPE_CHECKING:
     from tensorial import reaxkit
 
-_LOGGER = utils.RankedLogger(__name__, rank_zero_only=True)
+_LOGGER = logging.getLogger(__name__)
 
 DEFAULT_EVAL_FILE = "eval.yaml"
 
