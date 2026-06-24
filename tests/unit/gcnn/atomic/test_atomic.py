@@ -224,13 +224,13 @@ def test_type_contribution_lst_sq():
 
     def add_batchdim(counts, energy, mask):
         return (
-            counts.reshape(batch_size, -1),
-            energy.reshape(batch_size, -1),
-            mask.reshape(batch_size),
+            jnp.array(counts.reshape(batch_size, -1)),
+            jnp.array(energy.reshape(batch_size, -1)),
+            jnp.array(mask.reshape(batch_size)),
         )
 
     # Calculate the metric
-    metric = gcnn.atomic.TypeContributionLstsq.empty()
+    metric = gcnn.metrics.TypeContributionLstsq.empty()
     for counts, energy, mask in data:
         counts, energy, mask = add_batchdim(counts, energy, mask)
         metric = metric.update(counts, energy, mask)
@@ -240,7 +240,7 @@ def test_type_contribution_lst_sq():
     assert np.allclose(res, expected)
 
     # Calculate the metric by starting from .create()
-    metric = gcnn.atomic.TypeContributionLstsq.create(*add_batchdim(*data[0]))
+    metric = gcnn.metrics.TypeContributionLstsq.create(*add_batchdim(*data[0]))
     for counts, energy, mask in data:
         counts, energy, mask = add_batchdim(counts, energy, mask)
         metric = metric.update(counts, energy, mask)

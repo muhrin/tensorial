@@ -12,16 +12,15 @@ from pytray import tree
 import reax
 from typing_extensions import override
 
-from tensorial import nn_utils
-
-from . import _tree, keys
+from .. import _tree, keys
+from ... import nn_utils
 
 if TYPE_CHECKING:
     from tensorial import gcnn
 
 OutT = TypeVar("OutT")
 
-__all__ = ("GraphMetric", "graph_metric")
+__all__ = "GraphMetric", "graph_metric", "AvgNumNeighboursByType"
 
 
 @jt.jaxtyped(typechecker=beartype.beartype)
