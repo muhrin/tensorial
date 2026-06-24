@@ -30,7 +30,7 @@ def test_parity_plotter(tmp_path):
     trainer = reax.Trainer(default_root_dir=tmp_path, listeners=plotter)
 
     dataset = np.random.rand(2, 10)
-    trainer.fit(module, train_dataloaders=dataset, val_dataloaders=dataset)
+    trainer.fit(module, train_dataloaders=dataset, val_dataloaders=dataset, max_epochs=1)
 
     assert (pathlib.Path(trainer.log_dir) / "plots" / "train_epoch_0.pdf").exists()
     assert (pathlib.Path(trainer.log_dir) / "plots" / "validation_epoch_0.pdf").exists()
