@@ -222,7 +222,7 @@ class EnergyContributionLstsq(reax.Metric):
     _type_map: Array
     _metric: TypeContributionLstsq | None = None
 
-    def __init__(self, type_map: Sequence | Array, metric: TypeContributionLstsq = None):
+    def __init__(self, type_map: Sequence | Array, metric: TypeContributionLstsq | None = None):
         if type_map is None:
             raise ValueError("Must supply a value type_map")
         self._type_map = jnp.asarray(type_map)
@@ -296,12 +296,8 @@ class EnergyContributionLstsq(reax.Metric):
 
         one_hots = jax.nn.one_hot(types, num_classes)
 
-        # TODO: make it so we don't need to set the value in the graph
-        one_hot_field = ("type_one_hot",)
-        tree.set_by_path(graphs.nodes, one_hot_field, one_hots)
-        type_counts = graph_ops.graph_segment_reduce(
-            graphs, ("nodes",) + one_hot_field, reduction="sum"
-        )
+        # Predicting values
+        type_counts = graph_ops.segment_sum(one_hots, graphs.n_node)
 
         # Predicting values
         try:

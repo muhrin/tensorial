@@ -10,8 +10,7 @@ import numpy as np
 import pytest
 import reax
 
-import tensorial
-from tensorial import gcnn
+from tensorial import gcnn, nn_utils
 from tensorial.gcnn import atomic
 from tensorial.gcnn.atomic import keys
 
@@ -138,6 +137,30 @@ def test_metrics(molecule_dataset: Sequence[jraph.GraphsTuple]):
         value = metric.create(all_molecules).compute()
 
         assert jnp.allclose(res, value), f"Problem with metric {name}"
+
+
+def test_energy_contrib_lstsq(molecule_dataset: Sequence[jraph.GraphsTuple]):
+    all_molecules = jraph.batch(molecule_dataset)
+    atomic_numbers = all_molecules.nodes[keys.ATOMIC_NUMBERS]
+    energies = all_molecules.globals[keys.TOTAL_ENERGY]
+
+    types = jnp.unique(atomic_numbers)
+    n_types = len(types)
+    contributions = atomic.EnergyContributionLstsq(types).create(all_molecules).compute()
+
+    type_map = nn_utils.vwhere(atomic_numbers, types)
+    one_hots = jax.nn.one_hot(type_map, n_types)
+
+    type_counts = gcnn.graph_ops.segment_sum(one_hots, all_molecules.n_node)
+
+    # Normalize by number of nodes to match EnergyContributionLstsq implementation
+    n_node = all_molecules.n_node.reshape(-1, 1)
+    type_counts_normalized = type_counts / n_node
+    energies_normalized = energies.reshape(-1, 1) / n_node
+
+    expected = np.linalg.lstsq(type_counts_normalized, energies_normalized, rcond=None)[0]
+
+    assert jnp.allclose(expected, contributions, atol=1e-3)
 
 
 def test_all_atomic_numbers():
