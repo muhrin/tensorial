@@ -1,6 +1,6 @@
 from collections.abc import Mapping
 import functools
-from typing import Any
+from typing import Any, Generic, TypeVar
 
 import beartype
 import e3nn_jax as e3j
@@ -31,6 +31,8 @@ __all__ = (
 
 Array = jax.typing.ArrayLike
 
+T = TypeVar("T")
+
 
 def atleast_1d(arr, np_=jnp) -> jax.Array | np.ndarray:
     np_ = np_ if np_ is not None else arrays.infer_backend(arr)
@@ -56,7 +58,7 @@ def as_array(arr: jt.ArrayLike | e3j.IrrepsArray) -> jax.Array:
     return jnp.asarray(arr)
 
 
-class Attr(equinox.Module):
+class Attr(equinox.Module, Generic[T]):
     """Irreps object attribute"""
 
     irreps: e3j.Irreps
@@ -65,11 +67,11 @@ class Attr(equinox.Module):
         self.irreps = e3j.Irreps(irreps)
 
     @jt.jaxtyped(typechecker=beartype.beartype)
-    def create_tensor(self, value: Any) -> e3j.IrrepsArray:
+    def create_tensor(self, value: T) -> e3j.IrrepsArray:
         return e3j.IrrepsArray(self.irreps, atleast_1d(value))
 
     @jt.jaxtyped(typechecker=beartype.beartype)
-    def from_tensor(self, tensor: e3j.IrrepsArray) -> Any:
+    def from_tensor(self, tensor: e3j.IrrepsArray) -> T:
         """This can be overwritten to perform the backward transform of `create_tensor`"""
         return tensor
 

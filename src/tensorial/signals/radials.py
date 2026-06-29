@@ -2,15 +2,16 @@ import abc
 from collections.abc import Callable
 import math
 
-import e3nn_jax
+import e3nn_jax as e3j
 import jax
 import jax.numpy as jnp
+from jaxtyping import Array
 from typing_extensions import override
 
 import tensorial
 
 
-class RadialBasis(tensorial.Attr):
+class RadialBasis(tensorial.Attr[Array]):
     """A set of radial basis functions"""
 
     _number: int
@@ -19,7 +20,7 @@ class RadialBasis(tensorial.Attr):
     def __init__(self, number: int, domain=(0.0, jnp.inf)):
         self._number = number
         self._domain = domain
-        super().__init__(number * e3nn_jax.Irrep(0, p=1))
+        super().__init__(number * e3j.Irrep(0, p=1))
 
     @property
     def number(self) -> int:
@@ -43,7 +44,7 @@ class RadialBasis(tensorial.Attr):
         """Evaluate the radial basis at `r`"""
 
     @override
-    def create_tensor(self, value) -> jnp.array:
+    def create_tensor(self, value) -> e3j.IrrepsArray:
         return super().create_tensor(self.evaluate(value))  # pylint: disable=not-callable
 
 
@@ -71,7 +72,7 @@ class E3nnRadial(RadialBasis):
 
     @override
     def evaluate(self, radius):
-        return e3nn_jax.soft_one_hot_linspace(
+        return e3j.soft_one_hot_linspace(
             radius,
             start=self.domain[0],
             end=self.domain[1],
@@ -102,7 +103,7 @@ class E3nnPolyEnvelope(RadialBasis):
         self._radials = basis
         self._smoothing_start = smoothing_start
         self._smoothing_width = basis.domain[1] - smoothing_start
-        self._envelope = e3nn_jax.poly_envelope(n0, n1, self._smoothing_width)
+        self._envelope = e3j.poly_envelope(n0, n1, self._smoothing_width)
 
     def evaluate(self, radius):
         values = self._radials.evaluate(radius)

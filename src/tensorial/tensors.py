@@ -14,7 +14,7 @@ from . import base
 __all__ = "SphericalHarmonic", "CartesianTensor", "NoOp", "OneHot", "AsIrreps"
 
 
-class NoOp(base.Attr):
+class NoOp(base.Attr[e3j.IrrepsArray]):
     """An attribute that keeps IrrepsArrays with specified irreps unchanged"""
 
     def _validate(self, value):
@@ -30,7 +30,7 @@ class NoOp(base.Attr):
         return tensor
 
 
-class AsIrreps(base.Attr):
+class AsIrreps(base.Attr[jt.ArrayLike]):
     def _validate(self, value):
         assert isinstance(value, jnp.ndarray), "Expected a jnp.ndarray"
         assert value.shape[-1] == self.irreps.dim, "Dimension mismatch"
@@ -46,7 +46,7 @@ class AsIrreps(base.Attr):
         return tensor
 
 
-class SphericalHarmonic(base.Attr):
+class SphericalHarmonic(base.Attr[jax.Array | e3j.IrrepsArray]):
     """An attribute that is the spherical harmonics evaluated as some values"""
 
     normalise: bool
@@ -76,7 +76,7 @@ class SphericalHarmonic(base.Attr):
         )
 
 
-class OneHot(base.Attr):
+class OneHot(base.Attr[Int[Array, "n_vals"]]):
     """One-hot encoding as a direct sum of even scalars"""
 
     def __init__(self, num_classes: int):
@@ -94,7 +94,7 @@ class OneHot(base.Attr):
         return e3j.IrrepsArray(self.irreps, jax.nn.one_hot(value, self.num_classes))
 
 
-class CartesianTensor(base.Attr):
+class CartesianTensor(base.Attr[jt.ArrayLike]):
     formula: str
     keep_ir: e3j.Irreps | list[e3j.Irrep] | None
     irreps_dict: dict
