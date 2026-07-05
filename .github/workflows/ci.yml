@@ -33,7 +33,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-          python-version: '3.12' # Assuming 3.12 as default
+          python-version: '3.12'
 
       # Installs exactly what you locked + extra dependencies instantly
       - name: Install python dependencies
@@ -51,7 +51,7 @@ jobs:
         python-version: [ '3.10', '3.11', '3.12', '3.13', '3.14' ]
 
     steps:
-      - uses: actions/checkout@v4 # Upgraded from v2
+      - uses: actions/checkout@v4
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v5

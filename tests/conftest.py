@@ -1,3 +1,4 @@
+import os
 import random
 
 import e3nn_jax as e3j
@@ -14,6 +15,11 @@ from tensorial.gcnn import keys
 # Some numerical test rely on checking against numpy implementations and np will default to 64-bit,
 # so do that too
 config.update("jax_enable_x64", True)
+
+
+@pytest.fixture(autouse=True)
+def no_jax_preallocate():
+    os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 
 
 @pytest.fixture
