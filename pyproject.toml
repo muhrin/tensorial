@@ -79,7 +79,6 @@ exclude = [
     '.github/',
     'docs/',
     'examples/',
-    'tests/',
 ]
 
 [project.entry-points."reax.plugins.metrics"]
