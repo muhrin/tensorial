@@ -2,12 +2,15 @@ name: CodSpeed Benchmarks
 
 on:
   push:
-    branches: [ main,develop ]
+    branches: [ main, develop ]
   pull_request:
 
 jobs:
   benchmarks:
     runs-on: ubuntu-latest
+    # Move the 'if' condition here!
+    if: github.repository_owner == 'muhrin'
+
     permissions:
       contents: read
       id-token: write
