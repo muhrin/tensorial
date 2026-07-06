@@ -29,7 +29,7 @@ dependencies = [
     "hydra-core",
     'jax<0.11.0', # Control the JAX version, as previous updates have broken things
     'jaxlib<0.11.0',
-    'jaxtyping<0.4.0',
+    'jaxtyping',
     'jraph',
     'pytray',
     'e3nn-jax',
