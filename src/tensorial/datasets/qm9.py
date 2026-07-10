@@ -8,12 +8,11 @@ import types
 from typing import Any, Final, TypedDict
 import urllib.request
 
-import ase.data
 import jraph
 import numpy as np
 import tqdm
 
-from .. import base, gcnn
+from .. import base, gcnn, utils
 
 __all__ = ("Qm9",)
 
@@ -214,11 +213,13 @@ def to_graph(
     graph_attrs: list[str | tuple[str, str]] = None,
     np_=np,
 ) -> jraph.GraphsTuple:
+    ase_data = utils.optional_import("ase.data")
+
     n_nodes = len(entry["species"])
 
     # Convert species labels to numbers
     atomic_numbers = np.fromiter(
-        map(lambda symbol: ase.data.atomic_numbers[symbol], entry["species"]), dtype=int
+        map(lambda symbol: ase_data.atomic_numbers[symbol], entry["species"]), dtype=int
     )
     node_attrs_ = {gcnn.atomic.ATOMIC_NUMBERS: atomic_numbers}
     if node_attrs:

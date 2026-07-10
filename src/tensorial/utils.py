@@ -1,3 +1,4 @@
+import importlib
 import types
 
 import e3nn_jax as e3j
@@ -52,3 +53,18 @@ def ones_like(irreps_array: e3j.IrrepsArray) -> e3j.IrrepsArray:
     r"""Create an IrrepsArray of ones with the same shape as another IrrepsArray."""
     np_ = infer_backend(irreps_array.array)
     return ones(irreps_array.irreps, irreps_array.shape[:-1], irreps_array.dtype, np_=np_)
+
+
+def optional_import(name: str, extra: str | None = None):
+    """Import a module, raising a helpful error if it's missing."""
+    try:
+        return importlib.import_module(name)
+    except ImportError as e:
+        if extra:
+            hint = f" Install it with `pip install mylib[{extra}]`."
+        else:
+            hint = f" Install it with `pip install {name.split('.')[0]}`."
+
+        raise ImportError(
+            f"'{name}' is required for this feature but is not installed.{hint}"
+        ) from e

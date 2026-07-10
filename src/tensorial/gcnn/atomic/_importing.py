@@ -9,18 +9,11 @@ from tensorial.typing import Array, CellType, PbcType
 
 from . import keys
 from .. import _spatial as gcnn_graphs
-from ... import base
+from ... import base, utils
 
 if TYPE_CHECKING:
-    try:
-        import ase
-    except ImportError:
-        pass
-
-    try:
-        import pymatgen
-    except ImportError:
-        pass
+    import ase
+    import pymatgen
 
 __all__ = "graph_from_pymatgen", "graph_from_ase"
 
@@ -140,8 +133,8 @@ def graph_from_ase(
         the atomic graph
     """
     # pylint: disable=too-many-branches
-    from ase.calculators import singlepoint
-    import ase.stress
+    singlepoint = utils.optional_import("ase.calculators.singlepoint")
+    ase_stress = utils.optional_import("ase.stress")
 
     key_mapping = key_mapping or {}
     _key_mapping = {
@@ -188,7 +181,7 @@ def graph_from_ase(
                 pass
             elif graph_globals[key].shape == (6,):
                 # In Voigt order
-                graph_globals[key] = ase.stress.voigt_6_to_full_3x3_stress(graph_globals[key])
+                graph_globals[key] = ase_stress.voigt_6_to_full_3x3_stress(graph_globals[key])
             else:
                 raise RuntimeError(f"Unexpected shape for {key}, got: {graph_globals[key].shape}")
 

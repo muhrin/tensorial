@@ -23,7 +23,6 @@ classifiers = [
 keywords = ['machine learning', 'e3nn-jax', 'physics']
 requires-python = '>=3.10'
 dependencies = [
-    "ase",
     'beartype',
     "flax>=0.10.7",
     "hydra-core",
@@ -66,6 +65,9 @@ dev = [
     'pre-commit',
     'pylint',
     'black',
+    # Optional external libraries that we interact with
+    "ase",
+    "pymatgen",
 ]
 
 [tool.flit.module]

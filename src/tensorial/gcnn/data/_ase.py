@@ -1,35 +1,14 @@
 """Module for loading ase.Atoms objects as graphs"""
 
 from collections.abc import Sequence
-import importlib.util
-import sys
 from typing import Any, Final
 
 import jraph
 
 from .. import atomic
+from ... import utils
 
 __all__ = ("AseDataLoader",)
-
-
-def lazy_import(name: str):
-    """Lazily import a module using the standard library."""
-    spec = importlib.util.find_spec(name)
-    if spec is None:
-        # Optimization: if it's completely missing, we can fail early
-        # or return a dummy object.
-        pass
-    loader = importlib.util.LazyLoader(spec.loader)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader = loader
-    sys.modules[name] = module
-    return module
-
-
-# Lazy top-level imports: real load is deferred until first attribute access,
-# but the dependency is still visible here at the top of the module.
-ase = lazy_import("ase")
-ase_io = lazy_import("ase.io")
 
 
 class AseDataLoader(Sequence[jraph.GraphsTuple]):
@@ -40,6 +19,9 @@ class AseDataLoader(Sequence[jraph.GraphsTuple]):
         read_kwargs: dict[str, Any] | None = None,
         as_graphs: dict[str, Any] | None = None,
     ):
+        ase = utils.optional_import("ase")
+        ase_io = utils.optional_import("ase.io")
+
         # Params
         self._filepath: Final[tuple[str]] = (path,) if isinstance(path, str) else tuple(path)
         self._limit: Final[int | None] = limit
@@ -47,10 +29,10 @@ class AseDataLoader(Sequence[jraph.GraphsTuple]):
         self._read_kwargs: Final[dict[str, Any]] = self._init_kwargs(limit, read_kwargs)
 
         try:
-            loaded: list["ase.Atoms"] = []
+            loaded: "list[ase.Atoms]" = []
             for entry in self._filepath:
                 loaded.extend(ase_io.read(entry, **self._read_kwargs))
-            self._data: list["ase.Atoms" | jraph.GraphsTuple] = (
+            self._data: "list[ase.Atoms | jraph.GraphsTuple]" = (
                 [loaded] if isinstance(loaded, ase.Atoms) else loaded
             )
         except FileNotFoundError:
