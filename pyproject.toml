@@ -11,8 +11,9 @@ authors = [
 readme = 'README.rst'
 license = { file = 'LICENSE.txt' }
 classifiers = [
+
     'Development Status :: 4 - Beta',
-    'License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)',
+    'License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)',
     'Programming Language :: Python',
     'Programming Language :: Python :: 3.10',
     'Programming Language :: Python :: 3.11',
