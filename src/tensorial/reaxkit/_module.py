@@ -23,6 +23,11 @@ MetricsDict = dict[str, reax.Metric | str]
 LossFn = Callable[[OutputT_co, InputT], jax.Array]
 Optimizer = optax.GradientTransformation | Callable[[], optax.GradientTransformation]
 
+# What to assume about a loss function that doesn't say how it reduces over the batch.  This is
+# `reax`'s own default for raw logged values, so undeclared losses keep aggregating as they always
+# have.
+_DEFAULT_LOSS_REDUCTION: Final = "sum"
+
 
 class StepOutput(TypedDict):
     loss: NotRequired[jt.Array]
@@ -51,7 +56,16 @@ class ReaxModule(reax.Module[InputT, OutputT_co]):
         jit=True,
         donate_graph=False,
         output: Sequence[str] | None = ("predictions", "targets"),
+        loss_reduction: "reax.types.ReduceFx | None" = None,
     ):
+        """
+        Args:
+            loss_reduction: how ``loss_fn`` reduces its value over the batch, which is needed to
+                aggregate the logged loss over an epoch correctly.  Leave as ``None`` to ask the
+                loss function itself (`tensorial.gcnn.GraphLoss` knows), which falls back to
+                ``"sum"`` for plain callables that can't be asked.  Pass ``"mean"`` if your loss
+                function returns an average over the batch.
+        """
         super().__init__()
         # Params
         self._metrics: Final[reax.metrics.MetricCollection | None] = (
@@ -59,6 +73,7 @@ class ReaxModule(reax.Module[InputT, OutputT_co]):
         )
         self._output: Final[tuple[str, ...]] = self._init_output(output)
         self._loss_fn: Final[LossFn] = loss_fn
+        self._loss_reduction: "Final[reax.types.ReduceFx | None]" = loss_reduction
         self._model: Final[linen.Module] = model
 
         # State
@@ -147,6 +162,7 @@ class ReaxModule(reax.Module[InputT, OutputT_co]):
             logger=True,
             prog_bar=metrics is None,
             batch_size=batch_size,
+            reduce_fx=self._reduce_fx(),
         )
 
         if metrics is not None:
@@ -197,6 +213,7 @@ class ReaxModule(reax.Module[InputT, OutputT_co]):
             logger=True,
             prog_bar=metrics is None,
             batch_size=batch_size,
+            reduce_fx=self._reduce_fx(),
         )
 
         if metrics is not None:
@@ -248,6 +265,7 @@ class ReaxModule(reax.Module[InputT, OutputT_co]):
             logger=True,
             prog_bar=metrics is None,
             batch_size=batch_size,
+            reduce_fx=self._reduce_fx(),
         )
 
         if metrics is not None:
@@ -320,6 +338,18 @@ class ReaxModule(reax.Module[InputT, OutputT_co]):
         predictions: OutputT_co, targets: OutputT_co, metrics: MetricsDict
     ) -> dict[str, reax.Metric]:
         return {key: metric.create(predictions, targets) for key, metric in metrics.items()}
+
+    def _reduce_fx(self) -> "reax.types.ReduceFx":
+        """How the loss function reduces its value over the batch.
+
+        Logged losses are raw values, so `reax` has to be told this to aggregate them over an epoch
+        correctly: a mean is weighted by the batch size, a total is not.  `tensorial.gcnn.GraphLoss`
+        says which it does, otherwise we fall back to whatever was passed as ``loss_reduction``.
+        """
+        if self._loss_reduction is not None:
+            return self._loss_reduction
+
+        return getattr(self._loss_fn, "reduction", _DEFAULT_LOSS_REDUCTION)
 
     def _prep_batch(self, batch) -> tuple[InputT, OutputT_co | None]:
         if isinstance(batch, jraph.GraphsTuple):
