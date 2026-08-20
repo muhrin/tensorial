@@ -1,5 +1,5 @@
-"""The loss is logged as a raw value, so `reax` has to be told how it was reduced over the batch,
-otherwise a mean gets divided by the batch size a second time when the epoch value is computed.
+"""The loss is logged as a raw value, so `reax` has to be told how to combine the per-batch losses
+into an epoch value: averages are averaged, totals are added.
 """
 
 from flax import linen
@@ -55,31 +55,29 @@ def fit(dataset: np.ndarray, loss_fn, **kwargs) -> dict:
     return trainer.logged_metrics
 
 
-def test_mean_loss_is_not_scaled_by_the_batch_size(dataset):
-    """The epoch loss should be the loss of the data, not the loss divided by the batch size"""
+def test_mean_loss_is_averaged_over_batches(dataset):
+    """A loss that averages over its batch stays on that scale over the epoch"""
     per_batch = [float(mean_loss(batch**2, batch)) for batch in batches(dataset)]
-    expected = np.average(per_batch, weights=[len(batch) for batch in batches(dataset)])
 
     logged = fit(dataset, mean_loss, loss_reduction="mean")["train/loss"]
 
-    assert jnp.isclose(logged, expected, rtol=1e-5)
-    # The old behaviour, for the record: roughly `batch size` times smaller
+    assert jnp.isclose(logged, np.mean(per_batch), rtol=1e-5)
+    # The bug this guards against: the mean divided by the batch size a second time
     assert not jnp.isclose(logged, sum(per_batch) / NUM_SAMPLES)
 
 
-def test_sum_loss_is_unchanged(dataset):
-    """A loss returning a total per batch aggregates the way it always has"""
+def test_sum_loss_is_totalled_over_batches(dataset):
+    """A loss returning a total per batch gives the total over the epoch"""
     per_batch = [float(sum_loss(batch**2, batch)) for batch in batches(dataset)]
-    expected = sum(per_batch) / NUM_SAMPLES
 
     logged = fit(dataset, sum_loss, loss_reduction="sum")["train/loss"]
 
-    assert jnp.isclose(logged, expected, rtol=1e-5)
+    assert jnp.isclose(logged, sum(per_batch), rtol=1e-5)
 
 
-def test_plain_callable_defaults_to_sum(dataset):
-    """A loss function that can't be asked how it reduces keeps `reax`'s existing convention"""
-    assert fit(dataset, sum_loss)["train/loss"] == fit(dataset, sum_loss, loss_reduction="sum")[
+def test_plain_callable_defaults_to_mean(dataset):
+    """A loss function that can't be asked how it reduces is assumed to return an average"""
+    assert fit(dataset, mean_loss)["train/loss"] == fit(dataset, mean_loss, loss_reduction="mean")[
         "train/loss"
     ]
 

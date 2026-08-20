@@ -7,8 +7,9 @@ from tensorial import gcnn
 
 
 @pytest.mark.parametrize("batch_mode", [gcnn.data.BatchMode.IMPLICIT, gcnn.data.BatchMode.EXPLICIT])
-def test_cumulated_batch_size_effect(cube_graph, batch_mode):
-    """Test that the cumulated batch size correctly influences the computed metric"""
+def test_batch_size_and_logged_loss(cube_graph, batch_mode):
+    """Test that padded batches report the number of real graphs, and that per-batch losses are
+    combined over batches"""
     dataset_size = 9
     dset = [cube_graph for _ in range(dataset_size)]
 
@@ -41,21 +42,22 @@ def test_cumulated_batch_size_effect(cube_graph, batch_mode):
 
     metrics = results.ResultCollection()
 
-    # The loss is typically a sum over the batch
-    loss_sum1 = 15.0 * batch_size1
-    loss_sum2 = 10.0 * batch_size2
+    # The loss is a mean over the batch, as `gcnn.Loss` produces by default
+    loss1 = 15.0
+    loss2 = 10.0
 
     # Log metrics as the trainer would
-    metrics.log("train", "loss", loss_sum1, batch_idx=0, on_epoch=True, batch_size=bs1)
-    metrics.log("train", "loss", loss_sum2, batch_idx=1, on_epoch=True, batch_size=bs2)
+    metrics.log("train", "loss", loss1, batch_idx=0, on_epoch=True, batch_size=bs1)
+    metrics.log("train", "loss", loss2, batch_idx=1, on_epoch=True, batch_size=bs2)
 
     # Calculate metric outcome using ArrayResultMetric compute
     metric = metrics["train.loss"].metric
     computed = metric.compute()
 
-    # Compute statistically correct expected mean: (Sum over all valid graphs) / (Total Number of graphs)
-    expected_mean = (loss_sum1 + loss_sum2) / (batch_size1 + batch_size2)
+    # Raw values are combined over the batches they were logged in, and nothing is assumed about
+    # how many samples are behind each one.  Anything that needs the sample counts (e.g. a mean
+    # over graphs rather than over batches) has to be logged as a `reax.Metric`.
+    expected_mean = (loss1 + loss2) / 2
     assert jnp.isclose(computed, expected_mean), (
-        f"Expected batch mean {expected_mean}, but got {computed}. "
-        f"Cumulated batch size calculation is incorrect!"
+        f"Expected the mean over batches {expected_mean}, but got {computed}"
     )
