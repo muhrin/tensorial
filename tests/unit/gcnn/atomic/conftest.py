@@ -19,7 +19,7 @@ def molecule_dataset() -> Sequence[jraph.GraphsTuple]:
 
     dataset = []
     for molecule, _ in zip(ase.collections.g2, range(10)):
-        molecule.arrays[atomic.TOTAL_ENERGY] = random.random()
+        molecule.info[atomic.TOTAL_ENERGY] = random.random()
         molecule.arrays[atomic.FORCES] = np.random.rand(len(molecule), 3)
         dataset.append(molecule)
 

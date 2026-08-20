@@ -12,15 +12,35 @@ from tensorial import geometry
 from tensorial.geometry import jax_neighbours
 
 
-def random_cell_angles(cell_angles: tuple[float, float]) -> np.array:
-    """Create valid random unit cell angles"""
+def random_cell_angles(cell_angles: tuple[float, float]) -> np.ndarray:
+    """Create valid random unit cell angles compatible with ASE cellpar_to_cell."""
     assert len(cell_angles) == 2
     assert min(cell_angles) < 120.0
 
-    ang = np.random.uniform(*cell_angles, size=3)
-    while ang.sum() >= 360.0:
-        ang = np.random.uniform(*cell_angles, size=3)
-    return ang
+    while True:
+        ang = np.random.uniform(cell_angles[0], cell_angles[1], size=3)
+
+        # Basic sanity checks for crystallographic angles
+        if np.any(ang <= 0) or np.any(ang >= 180):
+            continue
+
+        alpha, beta, gamma = np.radians(ang)
+
+        cg = np.cos(gamma)
+        if abs(np.sin(gamma)) < 1e-14:
+            continue
+
+        cb = np.cos(beta)
+        ca = np.cos(alpha)
+        sg = np.sin(gamma)
+
+        # Replicate ASE's internal cellpar_to_cell check
+        cx = cb
+        cy = (ca - cb * cg) / sg
+        cz_sqr = 1.0 - cx * cx - cy * cy
+
+        if cz_sqr >= 0:
+            return ang
 
 
 @pytest.mark.parametrize("self_interaction", [True, False])

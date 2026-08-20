@@ -25,6 +25,16 @@ def h2coh() -> "ase.Atoms":
     return ase.build.molecule("H2COH")
 
 
+def test_graph_from_ase_info_extraction():
+    atoms = ase.Atoms("H2")
+    atoms.info["test_key"] = jnp.array([1.0, 2.0])
+
+    # Extract 'test_key' from atoms.info
+    graph = atomic.graph_from_ase(atoms, r_max=1.0, global_include_keys=("test_key",))
+
+    assert jnp.all(graph.globals["test_key"] == jnp.array([1.0, 2.0]))
+
+
 def test_graph_from_ase(ase_cubic_si):  # pylint: disable=redefined-outer-name
     si_graph = atomic.graph_from_ase(ase_cubic_si, r_max=1.1)
 
