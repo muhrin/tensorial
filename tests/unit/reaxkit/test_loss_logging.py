@@ -55,13 +55,15 @@ def fit(dataset: np.ndarray, loss_fn, **kwargs) -> dict:
     return trainer.logged_metrics
 
 
-def test_mean_loss_is_averaged_over_batches(dataset):
-    """A loss that averages over its batch stays on that scale over the epoch"""
+def test_mean_loss_is_averaged_over_samples(dataset):
+    """A loss that averages over its batch stays on that scale, weighted by the samples behind it,
+    so the short final batch doesn't count as a whole one"""
     per_batch = [float(mean_loss(batch**2, batch)) for batch in batches(dataset)]
+    weights = [len(batch) for batch in batches(dataset)]
 
     logged = fit(dataset, mean_loss, loss_reduction="mean")["train/loss"]
 
-    assert jnp.isclose(logged, np.mean(per_batch), rtol=1e-5)
+    assert jnp.isclose(logged, np.average(per_batch, weights=weights), rtol=1e-5)
     # The bug this guards against: the mean divided by the batch size a second time
     assert not jnp.isclose(logged, sum(per_batch) / NUM_SAMPLES)
 
@@ -77,9 +79,10 @@ def test_sum_loss_is_totalled_over_batches(dataset):
 
 def test_plain_callable_defaults_to_mean(dataset):
     """A loss function that can't be asked how it reduces is assumed to return an average"""
-    assert fit(dataset, mean_loss)["train/loss"] == fit(dataset, mean_loss, loss_reduction="mean")[
-        "train/loss"
-    ]
+    assert (
+        fit(dataset, mean_loss)["train/loss"]
+        == fit(dataset, mean_loss, loss_reduction="mean")["train/loss"]
+    )
 
 
 def test_reduction_is_taken_from_the_loss_function(dataset):

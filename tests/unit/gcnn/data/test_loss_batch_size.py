@@ -54,10 +54,9 @@ def test_batch_size_and_logged_loss(cube_graph, batch_mode):
     metric = metrics["train.loss"].metric
     computed = metric.compute()
 
-    # Raw values are combined over the batches they were logged in, and nothing is assumed about
-    # how many samples are behind each one.  Anything that needs the sample counts (e.g. a mean
-    # over graphs rather than over batches) has to be logged as a `reax.Metric`.
-    expected_mean = (loss1 + loss2) / 2
-    assert jnp.isclose(computed, expected_mean), (
-        f"Expected the mean over batches {expected_mean}, but got {computed}"
-    )
+    # Each per-batch mean is weighted by the number of real graphs behind it, so a padded final
+    # batch counts for the graphs it actually holds rather than as a whole batch
+    expected_mean = (loss1 * batch_size1 + loss2 * batch_size2) / (batch_size1 + batch_size2)
+    assert jnp.isclose(
+        computed, expected_mean
+    ), f"Expected the mean over graphs {expected_mean}, but got {computed}"
