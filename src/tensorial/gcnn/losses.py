@@ -35,6 +35,15 @@ class GraphLoss(equinox.Module):
         """Get a label for this loss function"""
         return self._label
 
+    @property
+    def reduction(self) -> Literal["sum", "mean"]:
+        """How the value returned by this loss has been reduced over the batch.
+
+        Needed by anything that aggregates losses over several batches (e.g. logging an epoch
+        average), as a mean and a total have to be combined differently.
+        """
+        return "mean"
+
     def __call__(
         self, predictions: jraph.GraphsTuple, targets: jraph.GraphsTuple = None
     ) -> jax.Array:
@@ -103,6 +112,10 @@ class Loss(GraphLoss):
             self._mask_field = None
         self._reduction = reduction
         super().__init__(label or utils.path_to_str(self._prediction_field))
+
+    @property
+    def reduction(self) -> Literal["sum", "mean"]:
+        return self._reduction
 
     def _call(self, predictions: jraph.GraphsTuple, targets: jraph.GraphsTuple) -> jax.Array:
         predictions_dict = predictions._asdict()
@@ -195,6 +208,19 @@ class WeightedLoss(GraphLoss):
     @property
     def weights(self):
         return jax.lax.stop_gradient(jnp.array(self._weights))
+
+    @property
+    def reduction(self) -> Literal["sum", "mean"]:
+        """The reduction shared by all the terms.
+
+        A weighted sum of terms that were reduced differently isn't one or the other, so in that
+        case we fall back to ``"mean"``, which is the reduction all the terms default to.
+        """
+        reductions = {loss_fn.reduction for loss_fn in self._loss_fns}
+        if len(reductions) == 1:
+            return next(iter(reductions))
+
+        return "mean"
 
     def _call(self, predictions: jraph.GraphsTuple, targets: jraph.GraphsTuple) -> jax.Array:
         # Calculate the loss for each function

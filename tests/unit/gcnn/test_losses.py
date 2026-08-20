@@ -136,6 +136,29 @@ def test_loss_with_padding(jit, graph_batch: jraph.GraphsTuple):
     assert jnp.isclose(padded_loss, loss)  # Padding shouldn't change the loss value
 
 
+@pytest.mark.parametrize("reduction", ["mean", "sum"])
+def test_loss_reports_its_reduction(reduction):
+    """Anything aggregating losses over batches needs to know how they were reduced"""
+    loss_fn = losses.Loss(
+        optax.squared_error, "globals.energy", "globals.energy_prediction", reduction=reduction
+    )
+    assert loss_fn.reduction == reduction
+
+
+def test_weighted_loss_reduction():
+    optax_loss = optax.squared_error
+
+    def make(reduction):
+        return losses.Loss(
+            optax_loss, "globals.energy", "globals.energy_prediction", reduction=reduction
+        )
+
+    assert losses.WeightedLoss([make("sum"), make("sum")]).reduction == "sum"
+    assert losses.WeightedLoss([make("mean"), make("mean")]).reduction == "mean"
+    # Terms that disagree don't add up to either one, so we fall back to the default reduction
+    assert losses.WeightedLoss([make("sum"), make("mean")]).reduction == "mean"
+
+
 def num_nodes(graph: jraph.GraphsTuple) -> int:
     return sum(graph.n_node)
 
