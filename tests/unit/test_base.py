@@ -45,3 +45,30 @@ def test_cartesian_tensor():
     # Make sure the round trip conversion leads back to the original tensor
     result = cart.from_tensor(cart.create_tensor(cart_tensor))
     jnp.allclose(cart_tensor, result)
+
+
+@pytest.mark.parametrize("rank", [2, 3, 4])
+def test_cartesian_tensor_rank(rank):
+    key = jax.random.PRNGKey(0)
+    irreps = e3j.Irreps("1o")
+
+    # Construct formula: "ij", "ijk", "ijkl"
+    indices = "".join([chr(ord("i") + i) for i in range(rank)])
+    formula = f"{indices}={indices}"
+
+    # Construct kwargs for CartesianTensor
+    kwargs = {idx: irreps for idx in indices}
+
+    cart = tensorial.CartesianTensor(formula, **kwargs)
+
+    # Let's create a random Cartesian tensor
+    shape = tuple([irreps.dim] * rank)
+    cart_tensor = jax.random.uniform(key, shape)
+
+    # Create tensor
+    result = cart.create_tensor(cart_tensor)
+    assert isinstance(result, e3j.IrrepsArray)
+
+    # Invert it
+    inverted = cart.from_tensor(result)
+    assert inverted.shape == cart_tensor.shape

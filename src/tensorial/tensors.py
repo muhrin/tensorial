@@ -114,8 +114,11 @@ class CartesianTensor(base.Attr[jt.ArrayLike]):
 
     @jt.jaxtyped(typechecker=beartype.beartype)
     def create_tensor(self, value: jt.ArrayLike) -> e3j.IrrepsArray:
+        # Construct the einsum string dynamically based on the rank
+        indices = self._indices
+        einsum_str = f"{indices},{indices}z->z"
         return super().create_tensor(  # pylint: disable=not-callable
-            jnp.einsum("ij,ijz->z", value, self.change_of_basis)
+            jnp.einsum(einsum_str, value, self.change_of_basis)
         )
 
     @jt.jaxtyped(typechecker=beartype.beartype)
