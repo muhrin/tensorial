@@ -11,8 +11,8 @@ import jax.numpy as jnp
 import jaxtyping as jt
 import jraph
 
-from . import _base, _tree
 from .. import base
+from . import _base, _tree
 
 if TYPE_CHECKING:
     from tensorial import gcnn
@@ -411,7 +411,7 @@ class MultiDerivative(Derivative):
 
     @property
     def graph_tuple_paths(self) -> "dict[gcnn.typing.TreePath, int]":
-        paths: "dict[gcnn.typing.TreePath, int]" = {}
+        paths: dict[gcnn.typing.TreePath, int] = {}
         wrt_map = []
         for part in self.parts:
             if not isinstance(part.wrt.key_path, int):
