@@ -53,7 +53,7 @@ class ReaxModule(reax.Module[InputT, OutputT_co]):
         scheduler: optax.Schedule | None = None,
         metrics: MetricsDict | None = None,
         jit=True,
-        donate_graph=True,
+        donate_graph=False,
         output: Sequence[str] | None = ("predictions", "targets"),
         loss_reduction: "reax.types.ReduceFn | None" = None,
     ):

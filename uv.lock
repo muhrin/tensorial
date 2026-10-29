@@ -1160,24 +1160,6 @@ wheels = [
 ]
 
 [[package]]
-name = "equinox"
-version = "0.13.8"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "jax", version = "0.6.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "jax", version = "0.10.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
-    { name = "jax", version = "0.11.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "jaxtyping", version = "0.3.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "jaxtyping", version = "0.3.11", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "typing-extensions" },
-    { name = "wadler-lindig" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/19/ff/522336d2f8264f2ad97119710b76e2cddf66145d03a1e89899175d26b192/equinox-0.13.8.tar.gz", hash = "sha256:dd075050018e2dd02e252e9d29d3060f7e67f085622d8d27a8e89e24bb8523db", size = 145257, upload-time = "2026-05-05T10:03:43.258Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ae/d6/69a76c8ccdef14af687c497040292a46e59fc7a0ab24724b60e50ca61030/equinox-0.13.8-py3-none-any.whl", hash = "sha256:ca004348533cc30a63ebe8823d7dd4bb626dce17743d40bbddb89b402ef2a240", size = 185813, upload-time = "2026-05-05T10:03:41.673Z" },
-]
-
-[[package]]
 name = "etils"
 version = "1.13.0"
 source = { registry = "https://pypi.org/simple" }
@@ -4873,12 +4855,11 @@ wheels = [
 
 [[package]]
 name = "reax"
-version = "0.7.0.dev2"
+version = "0.7.0.dev4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "beartype" },
     { name = "einops" },
-    { name = "equinox" },
     { name = "flax", version = "0.10.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "flax", version = "0.12.8", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
     { name = "flax", version = "0.12.9", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
@@ -4900,9 +4881,9 @@ dependencies = [
     { name = "tqdm" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b8/ed/1d6d1e50b555f43c3199054772ad8ee96bd047d4dbcf2346ba9bb3618fc0/reax-0.7.0.dev2.tar.gz", hash = "sha256:6c8c056749ed6b2943e6ba8bd58891c05c5e61eabd6802b940d1d7b178271af8", size = 151090, upload-time = "2026-10-26T10:48:32.831Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f2/0c/19df0bb23bcf91cc41e7fc6eac13d1736482462e25c1d9e7b386b288a227/reax-0.7.0.dev4.tar.gz", hash = "sha256:38f649abcc76a1795a4bc6149c253c2bed87c502be9d02a605b1461338c30208", size = 156955, upload-time = "2026-10-29T19:38:43.858Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3b/7e/a315f2ec19fb4ef5fb8219674161469941cd89b7f80c2c628605b4f2ca8d/reax-0.7.0.dev2-py3-none-any.whl", hash = "sha256:14b4911eae1aed357f04f7794f1ed6e6ca9557c4d34215e3c1aab955e6123b0b", size = 193744, upload-time = "2026-10-26T10:48:31.44Z" },
+    { url = "https://files.pythonhosted.org/packages/be/a3/90eb7781f454cbb180829a6d965207cd513f935b4db9851d92bf3e89cf81/reax-0.7.0.dev4-py3-none-any.whl", hash = "sha256:a8bb782e2619d789154b9e9db008e10b4a7cc71953176f12978f020f130c9bd9", size = 200832, upload-time = "2026-10-29T19:38:42.584Z" },
 ]
 
 [[package]]
@@ -6046,7 +6027,6 @@ dependencies = [
     { name = "ase" },
     { name = "beartype" },
     { name = "e3nn-jax" },
-    { name = "equinox" },
     { name = "flax", version = "0.10.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "flax", version = "0.12.8", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
     { name = "flax", version = "0.12.9", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
@@ -6111,7 +6091,6 @@ requires-dist = [
     { name = "beartype" },
     { name = "docutils", marker = "extra == 'docs'" },
     { name = "e3nn-jax", specifier = ">=0.21.0" },
-    { name = "equinox", specifier = ">=0.12.0" },
     { name = "flax", specifier = ">=0.10.7" },
     { name = "flit", marker = "extra == 'dev'" },
     { name = "hydra-colorlog" },
@@ -6134,7 +6113,7 @@ requires-dist = [
     { name = "pytest-cov", marker = "extra == 'dev'" },
     { name = "pytest-env", marker = "extra == 'dev'" },
     { name = "pytray" },
-    { name = "reax", specifier = ">=0.7.0.dev1,<0.8" },
+    { name = "reax", specifier = ">=0.7.0.dev4,<0.8" },
     { name = "requests" },
     { name = "rich" },
     { name = "ruff", marker = "extra == 'dev'" },
