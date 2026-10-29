@@ -19,6 +19,7 @@ import optax.losses
 from pytray import tree
 import reax
 import reax.pytree
+from reax.utils import masking
 
 from .. import base
 from . import _tree, graph_ops, keys, typing, utils
@@ -143,12 +144,12 @@ class Loss(GraphLoss):
         # If there is a mask in the graph, then use it by default
         mask = _tree.get_mask(targets, self._target_field)
         if mask is not None:
-            mask = reax.metrics.utils.prepare_mask(loss, mask)
+            mask = masking.prepare_mask(loss, mask)
 
         # Now, check for the presence of a user-defined mask
         if self._mask_field:
             user_mask = base.as_array(tree.get_by_path(targets._asdict(), self._mask_field))
-            user_mask = reax.metrics.utils.prepare_mask(loss, user_mask)
+            user_mask = masking.prepare_mask(loss, user_mask)
             if mask is None:
                 mask = user_mask
             else:

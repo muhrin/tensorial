@@ -10,6 +10,7 @@ from jaxtyping import Array, Int
 import jraph
 from pytray import tree
 import reax
+from reax.utils import masking
 from typing_extensions import override
 
 from ... import nn_utils
@@ -60,7 +61,7 @@ def mdiv(
             "Sizes of numerator and denominator must match, got {num.shape} and {denom.shape}"
         )
     if where is not None:
-        where = reax.metrics.utils.prepare_mask(denom, where)
+        where = masking.prepare_mask(denom, where)
         denom = jnp.where(where, denom, 1.0)
 
     return num / denom.reshape(num.shape)
@@ -262,8 +263,8 @@ class AvgNumNeighboursByType(reax.Metric[dict[int, jax.Array]]):
 
         counts = jnp.bincount(graphs.senders, length=jnp.sum(graphs.n_node).item())
         nodes = cast("dict[str, Any]", graphs.nodes)
-        mask = reax.metrics.utils.prepare_mask(counts, nodes.get(keys.MASK))
-        mask = mask if mask is not None else True
+        node_mask = nodes.get(keys.MASK)
+        mask = True if node_mask is None else masking.prepare_mask(counts, node_mask)
 
         num_classes = len(self._node_types)
         return [

@@ -7,7 +7,7 @@ import jax.numpy as jnp
 from jaxtyping import Float, Num
 import jraph
 import numpy as np
-import reax.metrics
+from reax.utils import masking
 
 from tensorial.typing import Array, CellType, PbcType
 
@@ -160,7 +160,7 @@ def with_edge_vectors(
 
     edge_mask = edges.get(keys.MASK)
     if edge_mask is not None:
-        edge_mask = reax.metrics.utils.prepare_mask(edge_vecs, edge_mask)
+        edge_mask = masking.prepare_mask(edge_vecs, edge_mask)
         edge_vecs = jnp.where(edge_mask, edge_vecs, 1.0)
 
     if not isinstance(edge_vecs, e3j.IrrepsArray) and as_irreps_array:

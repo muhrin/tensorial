@@ -5,7 +5,7 @@ import jax
 import jax.numpy as jnp
 import jaxtyping as jt
 from jaxtyping import Bool, Float, Int
-import reax.metrics
+from reax.utils import masking
 
 from tensorial import nn_utils
 from tensorial.typing import Array, IndexArray, IntoIrreps, IrrepsArrayShape
@@ -112,16 +112,11 @@ class MessagePassingConvolution(linen.Module):
         )
         # Get weights for the tensor product from our full-connected MLP
         if edge_mask is not None:
-            radial_embedding = jnp.where(
-                reax.metrics.utils.prepare_mask(radial_embedding, edge_mask),
-                radial_embedding,
-                0.0,
-            )
+            edge_mask = masking.prepare_mask(radial_embedding, edge_mask)
+            radial_embedding = jnp.where(edge_mask, radial_embedding, 0.0)
         weights = mlp(radial_embedding)
         if edge_mask is not None:
-            weights = jnp.where(
-                reax.metrics.utils.prepare_mask(radial_embedding, edge_mask), weights, 0.0
-            )
+            weights = jnp.where(edge_mask, weights, 0.0)
         messages = messages * weights
 
         zeros = e3j.zeros(messages.irreps, node_feats.shape[:1], messages.dtype)
