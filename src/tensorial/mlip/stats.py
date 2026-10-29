@@ -1,9 +1,9 @@
 from collections.abc import Callable, Sequence
 
-import equinox as eqx
 import jraph
 from pytray import tree
 import reax
+import reax.pytree
 from typing_extensions import Self, override
 
 _BoolReduce = Callable[[Sequence], bool]
@@ -13,7 +13,7 @@ _Oper = str | _BoolReduce
 class Unary(reax.Metric[bool]):
     """A unary operator metric"""
 
-    oper: _BoolReduce = eqx.field(static=True)
+    oper: _BoolReduce = reax.pytree.field(static=True)
     _state: bool | None
 
     def __init__(self, oper: _Oper, state: bool = True):
@@ -52,7 +52,7 @@ class Unary(reax.Metric[bool]):
 
 
 class Has(reax.Metric[bool]):
-    _field: tuple = eqx.field(static=True)
+    _field: tuple = reax.pytree.field(static=True)
     _state: Unary
 
     def __init__(self, field: str | tuple, oper: _Oper = "and", state: Unary | None = None):

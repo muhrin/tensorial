@@ -169,3 +169,23 @@ def num_edges(graph: jraph.GraphsTuple) -> int:
 
 def num_graphs(graph: jraph.GraphsTuple) -> int:
     return len(graph.n_node)
+
+
+def test_losses_as_jit_arguments(graph_batch: jraph.GraphsTuple):
+    """Losses are pytrees with static configuration, so they can be passed into jitted functions"""
+    energy = losses.Loss(optax.squared_error, "globals.energy_prediction", "globals.energy")
+    forces = losses.Loss(
+        optax.squared_error,
+        "nodes.force_predictions",
+        "nodes.forces",
+        reduction="sum",
+        mask_field="nodes.mask",
+    )
+    weighted = losses.WeightedLoss([energy, forces], [0.5, 2.0])
+
+    @jax.jit
+    def evaluate(loss_fn: losses.GraphLoss, graphs: jraph.GraphsTuple) -> jax.Array:
+        return loss_fn(graphs)
+
+    for loss_fn in (energy, forces, weighted):
+        assert jnp.allclose(evaluate(loss_fn, graph_batch), loss_fn(graph_batch))

@@ -3,7 +3,7 @@ from typing import Final
 
 import ase.cell
 import ase.neighborlist
-import equinox
+import jax
 import jax.numpy as jnp
 import numpy as np
 import pytest
@@ -60,7 +60,7 @@ def test_jax_open_boundary(self_interaction):
         neighbours[-1].sort()
 
     free = geometry.jax_neighbours.OpenBoundary(cutoff, include_self=self_interaction)
-    get_neighbours = equinox.filter_jit(free.get_neighbours)
+    get_neighbours = jax.jit(free.get_neighbours, static_argnames="max_neighbours")
     nlist = get_neighbours(positions, max_neighbours=free.estimate_neighbours(positions))
     assert not nlist.did_overflow, (
         f"Neighbour list has overflown, need at least {nlist.actual_max_neighbours} max neighbours"
@@ -165,7 +165,7 @@ def test_jax_periodic_boundary(self_interaction, cutoff, cell_angles: tuple[floa
     positions = pts_frac @ cell
 
     periodic = jax_neighbours.PeriodicBoundary(cell, cutoff, pbc=pbc, include_self=self_interaction)
-    get_neighbours = equinox.filter_jit(periodic.get_neighbours)
+    get_neighbours = jax.jit(periodic.get_neighbours, static_argnames="max_neighbours")
     # get_neighbours = periodic.get_neighbours
     neighbours = get_neighbours(positions, max_neighbours=periodic.estimate_neighbours(positions))
     assert not neighbours.did_overflow, (
@@ -309,3 +309,24 @@ def test_get_cell_multipliers(cutoff):
             math.ceil(cutoff / abc[cell_vector]) + 1,
         )
         assert jnp.all(mul_range == expected)
+
+
+@pytest.mark.parametrize("include_self", [True, False])
+def test_jax_neighbour_finder_as_jit_argument(include_self):
+    """Finders are pytrees with static configuration, so they can be passed into jitted
+    functions"""
+    cell = np.eye(3) * 2.0
+    positions = np.random.rand(8, 3) @ cell
+    periodic = jax_neighbours.PeriodicBoundary(
+        cell, 1.0, pbc=(True, True, True), include_self=include_self
+    )
+    max_neighbours = periodic.estimate_neighbours(positions)
+
+    @jax.jit
+    def get_neighbours(finder: jax_neighbours.NeighbourFinder, positions):
+        return finder.get_neighbours(positions, max_neighbours=max_neighbours)
+
+    jitted = get_neighbours(periodic, positions)
+    expected = periodic.get_neighbours(positions, max_neighbours=max_neighbours)
+    assert jnp.array_equal(jitted.neighbours, expected.neighbours)
+    assert jnp.array_equal(jitted.cell_indices, expected.cell_indices)

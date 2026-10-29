@@ -22,12 +22,12 @@ from typing import Any, Generic, TypeVar
 
 import beartype
 import e3nn_jax as e3j
-import equinox
 from flax import linen
 import jax
 import jax.numpy as jnp
 import jaxtyping as jt
 import numpy as np
+import reax.pytree
 from reax.utils import arrays
 from typing_extensions import TypeIs
 
@@ -98,7 +98,7 @@ def as_array(arr: jt.ArrayLike | e3j.IrrepsArray) -> jax.Array:
     return jnp.asarray(arr)
 
 
-class Attr(equinox.Module, Generic[T]):
+class Attr(reax.pytree.PyTree, Generic[T]):
     """An attribute that carries a single irrep, plus the transforms that
     move values to and from tensor representation.
 
@@ -113,7 +113,7 @@ class Attr(equinox.Module, Generic[T]):
             from this attribute.
     """
 
-    irreps: e3j.Irreps
+    irreps: e3j.Irreps = reax.pytree.field(static=True)
 
     def __init__(self, irreps: IntoIrreps) -> None:  # pylint: disable=redefined-outer-name
         self.irreps = e3j.Irreps(irreps)

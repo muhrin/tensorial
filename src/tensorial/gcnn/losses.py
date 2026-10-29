@@ -10,7 +10,6 @@ from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Final, Literal, cast
 
 import beartype
-import equinox
 import jax
 import jax.numpy as jnp
 import jaxtyping as jt
@@ -19,6 +18,7 @@ import jraph
 import optax.losses
 from pytray import tree
 import reax
+import reax.pytree
 
 from .. import base
 from . import _tree, graph_ops, keys, typing, utils
@@ -32,14 +32,14 @@ __all__ = "PureLossFn", "GraphLoss", "WeightedLoss", "Loss"
 PureLossFn = Callable[[jax.Array, jax.Array], jax.Array]
 
 
-class GraphLoss(equinox.Module):
+class GraphLoss(reax.pytree.PyTree):
     """Base class for losses over batches of `jraph.GraphsTuple`.
 
     Subclasses implement `_call` (and optionally `loss_with_contributions`) to
     combine a batch of predictions with a batch of targets into a scalar loss.
     """
 
-    _label: str
+    _label: str = reax.pytree.field(static=True)
 
     def __init__(self, label: str):
         self._label = label
@@ -75,11 +75,11 @@ class Loss(GraphLoss):
     such as optax losses
     """
 
-    _loss_fn: PureLossFn
-    _target_field: "gcnn.typing.TreePath"
-    _prediction_field: "gcnn.typing.TreePath"
-    _mask_field: "gcnn.typing.TreePath | None"
-    _reduction: Literal["sum", "mean"]
+    _loss_fn: PureLossFn = reax.pytree.field(static=True)
+    _target_field: "gcnn.typing.TreePath" = reax.pytree.field(static=True)
+    _prediction_field: "gcnn.typing.TreePath" = reax.pytree.field(static=True)
+    _mask_field: "gcnn.typing.TreePath | None" = reax.pytree.field(static=True)
+    _reduction: Literal["sum", "mean"] = reax.pytree.field(static=True)
 
     @jt.jaxtyped(typechecker=beartype.beartype)
     def __init__(
@@ -187,7 +187,7 @@ class WeightedLoss(GraphLoss):
             number of weights does not match the number of loss functions.
     """
 
-    _weights: tuple[float, ...]
+    _weights: tuple[float, ...] = reax.pytree.field(static=True)
     _loss_fns: tuple[GraphLoss, ...]
 
     @jt.jaxtyped(typechecker=beartype.beartype)

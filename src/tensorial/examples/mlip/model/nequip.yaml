@@ -49,16 +49,9 @@ model:
       field: attributes
       irreps_out: 16x0o + 16x0e + 16x1o + 16x1e
 
-    - _target_: tensorial.gcnn.NequipLayer
-      irreps_out: 16x0o + 16x0e + 16x1o + 16x1e
-      avg_num_neighbours: ${from_data.avg_num_neighbours}
-
-    - _target_: tensorial.gcnn.NequipLayer
-      irreps_out: 16x0o + 16x0e + 16x1o + 16x1e
-      avg_num_neighbours: ${from_data.avg_num_neighbours}
-
-    - _target_: tensorial.gcnn.NequipLayer
-      irreps_out: 16x0o + 16x0e + 16x1o + 16x1e
+    - _target_: tensorial.gcnn.Nequip
+      num_layers: 3
+      hidden_irreps: ${hidden_irreps}
       avg_num_neighbours: ${from_data.avg_num_neighbours}
 
     # Keep only scalars and reduce the number passing this point

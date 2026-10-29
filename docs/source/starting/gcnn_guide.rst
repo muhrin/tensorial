@@ -242,7 +242,7 @@ specialisations: :class:`EnergyContributionLstsq`,
 Wiring a model
 --------------
 
-The layers above are all ``flax.nnx`` / ``equinox`` modules. The simplest
+The layers above are all ``flax`` modules. The simplest
 way to chain them is :class:`tensorial.nn.Sequential`, which preserves
 ``GraphsTuple`` structure across the layers:
 

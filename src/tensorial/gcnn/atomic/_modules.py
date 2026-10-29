@@ -2,12 +2,12 @@ from collections.abc import Sequence
 from typing import cast
 
 import beartype
-import equinox
 import jax
 import jax.numpy as jnp
 import jaxtyping as jt
 from jaxtyping import Int
 import jraph
+import reax.pytree
 
 from tensorial.typing import Array
 
@@ -20,14 +20,14 @@ __all__ = "SpeciesTransform", "per_species_rescale"
 
 
 @jt.jaxtyped(typechecker=beartype.beartype)
-class SpeciesTransform(equinox.Module):
+class SpeciesTransform(reax.pytree.PyTree):
     """Take an ordered list of species and transform them into an integer corresponding to their
     position in the list
     """
 
     atomic_numbers: Int[jax.Array, "numbers"]
-    field: str = keys.ATOMIC_NUMBERS
-    out_field: str = gcnn_keys.SPECIES
+    field: str = reax.pytree.field(static=True, default=keys.ATOMIC_NUMBERS)
+    out_field: str = reax.pytree.field(static=True, default=gcnn_keys.SPECIES)
 
     @jt.jaxtyped(typechecker=beartype.beartype)
     def __init__(

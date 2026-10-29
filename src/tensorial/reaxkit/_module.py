@@ -2,7 +2,6 @@ from collections.abc import Callable, Mapping, Sequence
 from typing import Any, Final, Generic, TypeVar, cast
 
 import beartype
-import equinox as eqx
 from flax import linen
 import jax
 import jaxtyping as jt
@@ -54,7 +53,7 @@ class ReaxModule(reax.Module[InputT, OutputT_co]):
         scheduler: optax.Schedule | None = None,
         metrics: MetricsDict | None = None,
         jit=True,
-        donate_graph=False,
+        donate_graph=True,
         output: Sequence[str] | None = ("predictions", "targets"),
         loss_reduction: "reax.types.ReduceFn | None" = None,
     ):
@@ -75,13 +74,20 @@ class ReaxModule(reax.Module[InputT, OutputT_co]):
         self._loss_fn: Final[LossFn] = loss_fn
         self._loss_reduction: Final[reax.types.ReduceFn | None] = loss_reduction
         self._model: Final[linen.Module] = model
+        # Only the per-batch inputs are donated, the parameters and metric templates are reused
         if jit:
-            if donate_graph:
-                self.step = eqx.filter_jit(donate="all-except-first")(self.step)
-            else:
-                self.step = eqx.filter_jit(self.step)
-        self.calculate_metrics = eqx.filter_jit(donate="all")(self.calculate_metrics)
-        self._forward = eqx.filter_jit(donate="all")(self._forward)
+            self.step = jax.jit(
+                self.step,
+                static_argnames=("model", "loss_fn", "output"),
+                donate_argnames=("inputs",) if donate_graph else (),
+            )
+        self.calculate_metrics = jax.jit(
+            self.calculate_metrics, donate_argnames=("predictions", "targets")
+        )
+        self._forward = jax.jit(
+            self._forward, static_argnames=("model",), donate_argnames=("inputs",)
+        )
+        self._value_and_grad = jax.value_and_grad(self.step, argnums=0, has_aux=True)
 
         # State
         self._optimizer = optimizer
@@ -141,7 +147,7 @@ class ReaxModule(reax.Module[InputT, OutputT_co]):
         inputs, targets = self._prep_batch(batch)
         batch_size = _get_batch_size(inputs)
 
-        (loss, outs), grads = jax.value_and_grad(self.step, argnums=0, has_aux=True)(
+        (loss, outs), grads = self._value_and_grad(
             self.parameters(),
             inputs,
             None,

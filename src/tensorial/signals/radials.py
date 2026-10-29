@@ -5,10 +5,10 @@ from collections.abc import Callable
 import math
 
 import e3nn_jax as e3j
-import equinox as eqx
 import jax
 import jax.numpy as jnp
 from jaxtyping import Array
+import reax.pytree
 from typing_extensions import override
 
 import tensorial
@@ -22,8 +22,8 @@ class RadialBasis(tensorial.Attr[Array]):
         domain: the ``(start, end)`` radial domain the basis spans.
     """
 
-    _number: int = eqx.field(static=True)
-    _domain: tuple[float, float] = eqx.field(static=True)
+    _number: int = reax.pytree.field(static=True)
+    _domain: tuple[float, float] = reax.pytree.field(static=True)
 
     def __init__(self, number: int, domain=(0.0, jnp.inf)):
         """Initialise with the number of radial functions and a radial domain.
@@ -70,8 +70,8 @@ class E3nnRadial(RadialBasis):
     see: https://e3nn-jax.readthedocs.io/en/latest/api/radial.html
     """
 
-    _basis: str = eqx.field(static=True)
-    _cutoff: float | None = eqx.field(static=True)
+    _basis: str = reax.pytree.field(static=True)
+    _cutoff: float | None = reax.pytree.field(static=True)
 
     def __init__(
         self,

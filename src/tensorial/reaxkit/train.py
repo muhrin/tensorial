@@ -11,11 +11,10 @@ import pathlib
 import hydra
 from hydra.core import hydra_config
 import omegaconf
+from reax.lightning import rank_zero
 import reax.utils
 
 from . import config, from_data, keys, utils
-
-_LOGGER = logging.getLogger(__name__)
 
 DEFAULT_TRAIN_FILE = "train.yaml"
 
@@ -43,13 +42,13 @@ def train(cfg: omegaconf.DictConfig | dict):
     if cfg.get("seed"):
         reax.seed_everything(cfg.seed, workers=True)
 
-    _LOGGER.debug("Instantiating listeners...")
+    rank_zero.rank_zero_debug("Instantiating listeners...")
     listeners: list[reax.TrainerListener] = utils.instantiate_listeners(cfg.get("listeners"))
 
-    _LOGGER.debug("Instantiating loggers...")
+    rank_zero.rank_zero_debug("Instantiating loggers...")
     logger: list[reax.Logger] = utils.instantiate_loggers(cfg.get("logger"))
 
-    _LOGGER.debug(
+    rank_zero.rank_zero_debug(
         "Instantiating trainer <%s>",
         cfg[keys.TRAINER]._target_,  # pylint: disable=protected-access
     )
@@ -60,7 +59,7 @@ def train(cfg: omegaconf.DictConfig | dict):
         default_root_dir=output_dir,
     )
 
-    _LOGGER.debug(
+    rank_zero.rank_zero_debug(
         "Instantiating datamodule <%s>",
         cfg.data._target_,  # pylint: disable=protected-access
     )
@@ -83,7 +82,7 @@ def train(cfg: omegaconf.DictConfig | dict):
         with open(output_dir / config.DEFAULT_CONFIG_FILE, "w", encoding="utf-8") as file:
             file.write(omegaconf.OmegaConf.to_yaml(cfg, resolve=True))
 
-    _LOGGER.debug(
+    rank_zero.rank_zero_debug(
         "Instantiating model <%s>",
         cfg[keys.MODEL]._target_,  # pylint: disable=protected-access
     )
@@ -99,12 +98,12 @@ def train(cfg: omegaconf.DictConfig | dict):
     }
 
     if logger:
-        _LOGGER.debug("Logging hyperparameters!")
+        rank_zero.rank_zero_debug("Logging hyperparameters!")
         utils.log_hyperparameters(object_dict)
 
     # Fit the potential
     if cfg.get("train"):
-        _LOGGER.info("Starting training!")
+        rank_zero.rank_zero_info("Starting training!")
         trainer.fit(
             model, datamodule=datamodule, ckpt_path=cfg.get("ckpt_path"), **cfg.get("train")
         )
@@ -112,17 +111,17 @@ def train(cfg: omegaconf.DictConfig | dict):
     train_metrics = trainer.listener_metrics
 
     if cfg.get("test"):
-        _LOGGER.info("Starting testing!")
+        rank_zero.rank_zero_info("Starting testing!")
         ckpt_path = trainer.checkpoint_listener.best_model_path
         if ckpt_path == "":
-            _LOGGER.warning("Best ckpt not found! Using current weights for testing...")
+            rank_zero.rank_zero_warn("Best ckpt not found! Using current weights for testing...")
             ckpt_path = None
         trainer.test(
             model,
             datamodule=datamodule,
             ckpt_path=ckpt_path,
         )
-        _LOGGER.info("Best ckpt path: %s", ckpt_path)
+        rank_zero.rank_zero_info("Best ckpt path: %s", ckpt_path)
 
     test_metrics = trainer.listener_metrics
 

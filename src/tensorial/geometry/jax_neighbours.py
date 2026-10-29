@@ -10,10 +10,10 @@ import functools
 import numbers
 
 import beartype
-import equinox
 import jax
 import jax.numpy as jnp
 import jaxtyping as jt
+import reax.pytree
 
 from tensorial.typing import CellType, PbcType
 
@@ -25,7 +25,7 @@ DEFAULT_MAX_CELL_MULTIPLES = 10_000
 MASK_VALUE = -1
 
 
-class NeighbourList(equinox.Module, distances.NeighbourList):
+class NeighbourList(reax.pytree.PyTree, distances.NeighbourList):
     """JAX-backed :class:`~tensorial.geometry.distances.NeighbourList`.
 
     The neighbour table is stored as a rectangular array of shape ``(N, K)``
@@ -100,7 +100,7 @@ class NeighbourList(equinox.Module, distances.NeighbourList):
         return self._finder.get_neighbours(positions, max_neighbours=self.actual_max_neighbours)
 
 
-class NeighbourFinder(equinox.Module, distances.NeighbourFinder):
+class NeighbourFinder(reax.pytree.PyTree, distances.NeighbourFinder):
     """JAX-backed neighbour-finder base class for the backends below."""
 
     def get_neighbours(
@@ -115,8 +115,8 @@ class NeighbourFinder(equinox.Module, distances.NeighbourFinder):
 class OpenBoundary(NeighbourFinder):
     """Open-boundary neighbour finder (cutoff sphere, no periodic images)."""
 
-    _cutoff: float
-    _include_self: bool
+    _cutoff: float = reax.pytree.field(static=True)
+    _include_self: bool = reax.pytree.field(static=True)
 
     def __init__(self, cutoff: numbers.Number, include_self=False):
         """Initialise with a cutoff radius and (optionally) include self-neighbours."""
@@ -170,12 +170,12 @@ class PeriodicBoundary(NeighbourFinder):
     """
 
     _cell: jax.Array
-    _cutoff: float
+    _cutoff: float = reax.pytree.field(static=True)
     _cell_list: jax.Array
     _grid_points: jax.Array
-    _include_self: bool
-    _include_images: bool
-    _self_cell: int
+    _include_self: bool = reax.pytree.field(static=True)
+    _include_images: bool = reax.pytree.field(static=True)
+    _self_cell: int = reax.pytree.field(static=True)
 
     def __init__(
         self,

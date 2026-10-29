@@ -12,11 +12,11 @@ from typing import Literal
 
 import beartype
 import e3nn_jax as e3j
-import equinox as eqx
 import jax
 import jax.numpy as jnp
 import jaxtyping as jt
 from jaxtyping import Array, Float, Int
+import reax.pytree
 
 from tensorial.typing import IrrepsArrayShape
 
@@ -133,7 +133,7 @@ class OneHot(base.Attr[Int[Array, "n_vals 1"]]):
         ValueError: if neither ``num_classes`` nor ``types`` is provided.
     """
 
-    _types: tuple[int, ...] = eqx.field(static=True)
+    _types: tuple[int, ...] = reax.pytree.field(static=True)
 
     def __init__(self, num_classes: int | None = None, types: Sequence[int] | None = None):
         if num_classes is None:
