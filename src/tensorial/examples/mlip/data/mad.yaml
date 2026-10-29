@@ -12,4 +12,5 @@ as_graphs:
   global_include_keys:
     - energy
     - stress
-batch_size: 64 # Needs to be divisible by the number of devices (e.g., if in a distributed setup)
+
+batch_size: 32

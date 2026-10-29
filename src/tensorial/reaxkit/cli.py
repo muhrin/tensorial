@@ -1,4 +1,21 @@
-"""Main CLI command"""
+"""Command-line entry point for the ``tensorial`` executable.
+
+Installing the package exposes a ``tensorial`` command (see
+``[project.scripts]`` in ``pyproject.toml``) with three subcommands:
+
+``tensorial train -i <config>``
+    Train a model from a Hydra config (see :func:`tensorial.reaxkit.train`).
+
+``tensorial predict -i <config-or-dir>``
+    Evaluate a trained checkpoint (see :func:`tensorial.reaxkit.evaluate`).
+
+``tensorial examples [list|init] [<name> [<dest>]]``
+    List or copy the bundled example configurations.
+
+``train`` and ``predict`` forward their remaining arguments to Hydra, so any
+config value can be overridden on the command line.  See the
+:doc:`command-line interface guide </starting/cli_guide>` for details.
+"""
 
 import argparse
 from importlib import resources

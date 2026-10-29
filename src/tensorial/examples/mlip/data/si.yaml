@@ -11,4 +11,4 @@ as_graphs:
     - energy
     - stress
 train_val_test_split: [ 0.8, 0.1, 0.1 ]
-batch_size: 7 # Needs to be divisible by the number of devices (e.g., if in a distributed setup)
+batch_size: 32

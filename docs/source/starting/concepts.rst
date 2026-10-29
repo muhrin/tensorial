@@ -91,7 +91,8 @@ points are exposed:
 
 * :func:`tensorial.reaxkit.train` — fit + test + predict in one call.
 * :func:`tensorial.reaxkit.evaluate` — evaluation-only (no training).
-* :func:`tensorial.reaxkit.cli` — a thin CLI wrapper around both.
+* :func:`tensorial.reaxkit.cli` — a thin CLI wrapper around both (see
+  :doc:`cli_guide`).
 
 The optional :class:`tensorial.reaxkit.from_data.FromData` stage lets you
 compute statistics on the training data at runtime and bake them back into

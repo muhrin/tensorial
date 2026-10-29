@@ -47,6 +47,7 @@ Table Of Contents
 
    starting/about.rst
    starting/quickstart.rst
+   starting/cli_guide.rst
    starting/gcnn_guide.rst
    starting/mlip_guide.rst
    starting/concepts.rst
