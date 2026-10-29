@@ -2,13 +2,12 @@ import copy
 import logging
 import math
 import numbers
-import sys
 from typing import Any, Final
 
 import jax
 from lightning_utilities.core import rank_zero
 import reax
-import tqdm
+import rich.progress
 from typing_extensions import override
 
 __all__ = ("MetricsPrinter",)
@@ -26,6 +25,7 @@ class MetricsPrinter(reax.listeners.ProgressBar):
     """
 
     _progress_bar = None
+    _task_id = None
     NUMBER_DECIMALS = 5
     MIN_COLUMN_WIDTH = 5
 
@@ -80,15 +80,15 @@ class MetricsPrinter(reax.listeners.ProgressBar):
         """
         return trainer.current_epoch if isinstance(trainer.stage, reax.stages.Fit) else None
 
-    def _make_tqdm(self, loop: "reax.stages.Loop") -> tqdm.tqdm:
-        """Create the tqdm bar for a loop over batches."""
-        return tqdm.tqdm(
-            desc=loop.name,
+    def _make_progress(self) -> rich.progress.Progress:
+        """Create a rich progress bar for a loop over batches."""
+        return rich.progress.Progress(
+            rich.progress.TextColumn("[progress.description]{task.description}"),
+            rich.progress.BarColumn(),
+            rich.progress.TaskProgressColumn(),
+            rich.progress.TimeRemainingColumn(),
+            transient=True,
             disable=self.is_disabled,
-            leave=False,
-            dynamic_ncols=True,
-            file=sys.stdout,
-            smoothing=0,
         )
 
     @override
@@ -98,17 +98,17 @@ class MetricsPrinter(reax.listeners.ProgressBar):
         if not isinstance(loop, reax.stages.LoopOverBatches):
             return
         if self._progress_bar is not None:
-            self._progress_bar.close()
-        self._progress_bar = self._make_tqdm(loop)
+            self._progress_bar.stop()
+        self._progress_bar = self._make_progress()
         total = loop.max_batches
-        # tqdm only renders a determinate bar/percentage for finite totals, and
+        # Rich only renders a determinate bar/percentage for finite totals, and
         # `inf` overflows while formatting the ETA. Fall back to indeterminate mode.
         if total is not None and math.isfinite(total):
             total = int(total)
         else:
             total = None
-        self._progress_bar.reset(total=total)
-        self._progress_bar.initial = 0
+        self._task_id = self._progress_bar.add_task(loop.name, total=total)
+        self._progress_bar.start()
 
     @override
     def on_loop_iter_end(
@@ -119,10 +119,12 @@ class MetricsPrinter(reax.listeners.ProgressBar):
         _outputs: Any,
         /,
     ) -> None:
-        if isinstance(loop, reax.stages.LoopOverBatches) and self._progress_bar is not None:
-            pbar = self._progress_bar
-            pbar.n = loop.batch_idx + 1
-            pbar.refresh()
+        if (
+            isinstance(loop, reax.stages.LoopOverBatches)
+            and self._progress_bar is not None
+            and self._task_id is not None
+        ):
+            self._progress_bar.update(self._task_id, completed=loop.batch_idx + 1)
 
     @override
     def on_loop_end(
@@ -137,10 +139,11 @@ class MetricsPrinter(reax.listeners.ProgressBar):
             return
 
         if self._progress_bar is not None:
-            self._progress_bar.close()
+            self._progress_bar.stop()
             # Drop the reference so a subsequent iteration of a different (nested) loop
             # doesn't write to this now-closed bar.
             self._progress_bar = None
+            self._task_id = None
 
         if not self._enabled:
             return
