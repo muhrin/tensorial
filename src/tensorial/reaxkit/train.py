@@ -5,7 +5,6 @@ Hydra/OmegaConf config, then runs the optional ``from_data`` stage and the
 fit / test / predict stages.
 """
 
-import logging
 import pathlib
 
 import hydra
@@ -70,17 +69,12 @@ def train(cfg: omegaconf.DictConfig | dict):
             cfg[keys.FROM_DATA], trainer.engine, datamodule=datamodule
         )
         stage = trainer.run(from_data_stage)
-        print(
-            "Calculated from data (these can be used in your config files using "
-            "${from_data.<name>}:",
-        )
-        utils.rich_utils.print_tree(stage.calculated, keys.FROM_DATA)
+        _print_from_data(stage.calculated)
 
     # Save the configuration file here, this way things like inputs used to setup the model
     # will be baked into the input
     if output_dir is not None:
-        with open(output_dir / config.DEFAULT_CONFIG_FILE, "w", encoding="utf-8") as file:
-            file.write(omegaconf.OmegaConf.to_yaml(cfg, resolve=True))
+        _save_config(cfg, output_dir)
 
     rank_zero.rank_zero_debug(
         "Instantiating model <%s>",
@@ -129,6 +123,20 @@ def train(cfg: omegaconf.DictConfig | dict):
     metric_dict = {**train_metrics, **test_metrics}
 
     return metric_dict, object_dict
+
+
+@rank_zero.rank_zero_only
+def _print_from_data(calculated) -> None:
+    print(
+        "Calculated from data (these can be used in your config files using ${from_data.<name>}:",
+    )
+    utils.rich_utils.print_tree(calculated, keys.FROM_DATA)
+
+
+@rank_zero.rank_zero_only
+def _save_config(cfg: omegaconf.DictConfig, output_dir: pathlib.Path) -> None:
+    with open(output_dir / config.DEFAULT_CONFIG_FILE, "w", encoding="utf-8") as file:
+        file.write(omegaconf.OmegaConf.to_yaml(cfg, resolve=True))
 
 
 def main(cfg: omegaconf.DictConfig) -> float | None:
