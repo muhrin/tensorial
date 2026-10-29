@@ -369,7 +369,12 @@ class ReaxModule(reax.Module[InputT, OutputT_co]):
         return inputs, outputs
 
 
-def _get_batch_size(inputs: InputT) -> int | None:
+def _get_batch_size(inputs: InputT) -> jax.Array | None:
+    """Number of real (unpadded) graphs in the batch.
+
+    Kept on the device rather than converted with ``.item()`` so the host doesn't have to wait for
+    queued device work before dispatching the step.
+    """
     if not isinstance(inputs, jraph.GraphsTuple):
         return None
 
@@ -379,4 +384,4 @@ def _get_batch_size(inputs: InputT) -> int | None:
     except KeyError:
         mask = _graph_padding.get_graph_padding_mask(inputs)
 
-    return mask.sum().item()
+    return mask.sum()
