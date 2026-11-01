@@ -66,7 +66,9 @@ class Qm9(collections.abc.Sequence):
         (100, <class 'jraph.GraphsTuple'>)
     """
 
-    URL: Final[str] = "https://springernature.figshare.com/ndownloader/files/3195389"
+    # The ndownloader host serves the file directly; figshare.com and
+    # springernature.figshare.com put downloads behind a browser challenge.
+    URL: Final[str] = "https://ndownloader.figshare.com/files/3195389"
     FILENAME: Final[str] = "dsgdb9nsd.xyz.tar.bz2"
     QM9_STRUCTURES: Final[str] = "qm9_structures"
 
@@ -93,7 +95,7 @@ class Qm9(collections.abc.Sequence):
         self._rng = np.random.default_rng(seed=rng_seed)
 
         if download:
-            self._do_download("/".join([self.URL, self.FILENAME]), self.FILENAME)
+            self._do_download(self.URL, self.FILENAME)
 
         archive_path = pathlib.Path(self._data_dir) / self.FILENAME
         self._data = self._extract_tarball(archive_path, limit, shuffle)
@@ -276,7 +278,7 @@ def to_graph(
         for key in node_attrs:
             if isinstance(key, str):
                 label = key
-            elif isinstance(key, (tuple, list)):
+            elif isinstance(key, collections.abc.Sequence):
                 key, label = key
             else:
                 raise ValueError(f"Not attributes key must be str or tuple, got {type(key)}")
@@ -292,7 +294,7 @@ def to_graph(
         for key in graph_attrs:
             if isinstance(key, str):
                 label = key
-            elif isinstance(key, (tuple, list)):
+            elif isinstance(key, collections.abc.Sequence):
                 key, label = key
             else:
                 raise ValueError(f"Not attributes key must be str or tuple, got {type(key)}")
