@@ -52,6 +52,8 @@ ForceRmse = gcnn.graph_metric(
     targets="nodes.forces",
     predictions="nodes.predicted_forces",
     mask="nodes.mask",
+    # Some datasets (e.g. QM9) have energies only
+    optional=True,
 )
 
 StressRmse = gcnn.graph_metric(
@@ -59,4 +61,6 @@ StressRmse = gcnn.graph_metric(
     targets=f"globals.{keys.STRESS}",
     predictions=f"globals.{keys.predicted(keys.STRESS)}",
     mask=f"globals.{keys.MASK}",
+    # Many datasets (e.g. of molecules) have no stresses
+    optional=True,
 )

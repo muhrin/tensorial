@@ -63,11 +63,19 @@ class CalcStresses(linen.Module):
         Args:
             graph (jraph.GraphsTuple): A batched graph representing a set of atomistic systems.
 
+        Graphs without a unit cell (no ``cell`` global, as for a dataset of molecules) have no
+        stress, so only the energy function is evaluated.
+
         Returns:
             jraph.GraphsTuple: The input graph with updated node fields containing
             virials and optionally stresses.
         """
         globals_dict = cast(dict[str, Any], graph.globals)
+        if keys.CELL not in globals_dict:
+            # No cell (e.g. a dataset of molecules), so stress is not defined: just evaluate the
+            # wrapped energy function, as we would otherwise do when computing the virial
+            return self.energy_fn(graph)
+
         cell: CellArray = globals_dict[keys.CELL]
         if not base.is_tensorial_array_like(cell):
             raise TypeError(

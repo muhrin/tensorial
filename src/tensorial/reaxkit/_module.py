@@ -325,7 +325,8 @@ class ReaxModule(reax.Module[InputT, OutputT_co]):
             outs["predictions"] = predictions
 
         if metrics:
-            metrics = metrics.create(predictions, inputs)
+            # Optional metrics (e.g. stresses) are left out when the data has no values for them
+            metrics = metrics.create(predictions, inputs, ignore_missing=True)
             outs["metrics"] = metrics
 
         return loss_fn(predictions, inputs), outs
@@ -342,7 +343,13 @@ class ReaxModule(reax.Module[InputT, OutputT_co]):
     def calculate_metrics(
         predictions: OutputT_co, targets: OutputT_co, metrics: Mapping[str, reax.Metric]
     ) -> dict[str, reax.Metric]:
-        return {key: metric.create(predictions, targets) for key, metric in metrics.items()}
+        created = {}
+        for key, metric in metrics.items():
+            try:
+                created[key] = metric.create(predictions, targets)
+            except reax.exceptions.DataNotFound:
+                pass  # An optional metric with no data in this batch
+        return created
 
     def _reduce_fn(self) -> "reax.types.ReduceFn":
         """How the losses logged over an epoch should be reduced to a single value.
