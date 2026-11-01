@@ -67,17 +67,25 @@ Loss
 ----
 
 :func:`tensorial.mlip.mlip_loss` builds a :class:`tensorial.gcnn.WeightedLoss`
-over the energy and force terms, with the conventional relative weighting
-(energy ``1.0``, forces ``20.0``) out of the box:
+over the energy, force and stress terms, with the conventional relative weighting
+(energy ``1.0``, forces ``20.0``, stress ``1.0``) out of the box:
 
 .. code-block:: python
 
     from tensorial.mlip import mlip_loss
 
-    loss = mlip_loss(energy=True, forces=True, energy_weight=1.0, force_weight=20.0)
+    loss = mlip_loss(energy_weight=1.0, force_weight=20.0)
 
-Any term can be switched off (``energy=False`` / ``forces=False``) if you only
-train on a subset.
+By default every term is *optional*: it is used only when the data has values for
+it, so the same loss works for molecules (no stresses) and crystals.  Pass ``True``
+to require a term or ``False`` to leave it out (e.g. ``forces=False``).  Structures
+whose stress was filled in with a placeholder (in a dataset that mixes molecules and
+crystals) are masked out of the stress term.
+
+The energy is compared per atom (``energy_per_atom=True``), so structures of all
+sizes contribute equally.  This uses the ``normalise_by`` option of
+:class:`tensorial.gcnn.Loss`, which divides a per-graph target and prediction by
+any per-graph value, e.g. ``normalise_by="n_node"``.
 
 Metrics
 -------

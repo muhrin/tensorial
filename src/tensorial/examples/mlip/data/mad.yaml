@@ -4,6 +4,8 @@ _target_: tensorial.gcnn.data.ase_graph_module_from_datasets
 train: https://archive.materialscloud.org/records/c4ene-0mv14/files/mad-train.xyz?download=1
 val: https://archive.materialscloud.org/records/c4ene-0mv14/files/mad-val.xyz?download=1
 test: https://archive.materialscloud.org/records/c4ene-0mv14/files/mad-test.xyz?download=1
+# Set `data_limit` (e.g. in debug=smoke) to read only the first few structures of each file
+limit: ${oc.select:data_limit,null}
 as_graphs:
   r_max: ${r_max}
   atom_include_keys:

@@ -1,0 +1,28 @@
+# The standard loss for an interatomic potential: a weighted sum of energy, forces and stress.
+#
+# The energy is compared per atom.  Every term is optional, so it is used only when the data has values for it: the same loss
+# works for crystals (with stresses) and molecules (without).  Structures whose stress was filled
+# in with a placeholder (in a dataset that mixes the two) are masked out of the stress term.
+# Change the weights on the command line, e.g. `loss.weights=[1.0,100.0,1.0]`.
+_target_: tensorial.gcnn.WeightedLoss
+loss_fns:
+  - _target_: tensorial.gcnn.Loss
+    loss_fn: squared_error
+    targets: globals.energy
+    predictions: globals.predicted_energy
+    normalise_by: n_node  # per-atom energy, so structures of all sizes count equally
+    optional: true
+
+  - _target_: tensorial.gcnn.Loss
+    loss_fn: squared_error
+    targets: nodes.forces
+    predictions: nodes.predicted_forces
+    optional: true
+
+  - _target_: tensorial.gcnn.Loss
+    loss_fn: squared_error
+    targets: globals.stress
+    predictions: globals.predicted_stress
+    optional: true
+
+weights: [ 1.0, 20.0, 1.0 ]

@@ -2,7 +2,7 @@ _target_: tensorial.gcnn.data.GraphDataModule.from_random_split
 dataset:
   _target_: tensorial.datasets.Qm9
   data_dir: ${paths.data_dir}
-  limit: 10000
+  limit: ${oc.select:data_limit,10000}
   as_graphs:
     r_max: ${r_max}
     graph_attrs:

@@ -1,0 +1,19 @@
+# @package _global_
+
+# A quick end-to-end check that an example still runs: a few structures, one epoch.
+# Used by the examples CI workflow, e.g.:
+#   tensorial train -i train.yaml debug=smoke
+#   tensorial predict -i eval.yaml debug=smoke ckpt_path=...
+
+# Read only the first few structures of each data file
+data_limit: 64
+
+train:
+  min_epochs: 1
+  max_epochs: 1
+  check_val_every_n_epoch: 1
+
+# Then evaluate the best checkpoint on the test set
+test: true
+
+tags: [ "smoke" ]

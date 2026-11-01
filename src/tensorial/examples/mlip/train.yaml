@@ -6,6 +6,7 @@ defaults:
   - _self_
   - data: si
   - model: mace
+  - loss: mlip
   - listeners: default
   - logger: csv # set logger here or use command line (e.g. `python train.py logger=tensorboard`)
   - trainer: default

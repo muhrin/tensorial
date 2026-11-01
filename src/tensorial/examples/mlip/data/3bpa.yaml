@@ -1,0 +1,22 @@
+# 3BPA (Kovács et al., 2021): https://github.com/davkovacs/BOTNet-datasets
+# A flexible drug-like molecule, used to test extrapolation to higher temperatures.
+# Train on 500 configurations sampled at 300 K (50 held out for validation) and test
+# at 300 K.  To test at higher temperatures, override the test set, e.g.:
+#   data.test=https://raw.githubusercontent.com/davkovacs/BOTNet-datasets/main/dataset_3BPA/test_1200K.xyz
+# To train on configurations from all three temperatures, use train_mixedT.xyz instead.
+_target_: tensorial.gcnn.data.ase_graph_module_from_datasets
+
+train: https://raw.githubusercontent.com/davkovacs/BOTNet-datasets/main/dataset_3BPA/train_300K.xyz
+test: https://raw.githubusercontent.com/davkovacs/BOTNet-datasets/main/dataset_3BPA/test_300K.xyz
+val_from_train: 50
+# Set `data_limit` (e.g. in debug=smoke) to read only the first few structures of each file
+limit: ${oc.select:data_limit,null}
+as_graphs:
+  r_max: ${r_max}
+  atom_include_keys:
+    - numbers
+    - forces
+  global_include_keys:
+    - energy
+
+batch_size: 5

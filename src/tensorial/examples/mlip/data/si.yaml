@@ -2,6 +2,8 @@
 _target_: tensorial.gcnn.data.ase_graph_module_random_split
 
 path: ${paths.data_dir}/sitraj.xyz
+# Set `data_limit` (e.g. in debug=smoke) to read only the first few structures of each file
+limit: ${oc.select:data_limit,null}
 as_graphs:
   r_max: ${r_max}
   atom_include_keys:

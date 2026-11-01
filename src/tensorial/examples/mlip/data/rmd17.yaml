@@ -1,0 +1,22 @@
+# Revised MD17 (Christensen & von Lilienfeld, 2020): https://doi.org/10.6084/m9.figshare.12672038
+# Ten small molecules, PBE/def2-SVP energies and forces (converted to eV).
+# Uses the standard 1000-conformation train/test splits: 950 train, 50 validation, 1000 test.
+# Pick the molecule and split on the command line, e.g.:
+#   data=rmd17 data.molecule=ethanol data.split=2
+_target_: tensorial.datasets.rmd17_graph_module
+
+molecule: aspirin
+split: 1
+val_from_train: 50
+# Set `data_limit` (e.g. in debug=smoke) to read only the first few conformations of each split
+limit: ${oc.select:data_limit,null}
+data_dir: ${paths.data_dir}
+as_graphs:
+  r_max: ${r_max}
+  atom_include_keys:
+    - numbers
+    - forces
+  global_include_keys:
+    - energy
+
+batch_size: 5

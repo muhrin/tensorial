@@ -10,12 +10,8 @@ optimizer:
 #  init_value: 0.1
 #  decay_steps: 100
 
-loss_fn:
-  _target_: tensorial.mlip.losses.mlip_loss
-  energy: ${from_data.has_energies}
-  forces: ${from_data.has_forces}
-  energy_weight: 1.0
-  force_weight: 20.0
+# Defined in the `loss` config group
+loss_fn: ${loss}
 
 metrics:
   ermse: atomic/energy_per_atom_rmse
