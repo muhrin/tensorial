@@ -70,7 +70,12 @@ class GraphLoss(reax.pytree.PyTree):
             targets = predictions
         return self._call(predictions, targets)
 
-    def is_active(self, predictions: jraph.GraphsTuple, targets: jraph.GraphsTuple) -> bool:
+    def is_active(
+        # pylint: disable=unused-argument
+        self,
+        predictions: jraph.GraphsTuple,
+        targets: jraph.GraphsTuple,
+    ) -> bool:
         """Whether this loss applies to the given batch.
 
         An optional loss is inactive when the data it needs is missing from the batch, and a
@@ -227,7 +232,11 @@ class Loss(GraphLoss):
             segments: Int[Array, "n_graph"] = targets.n_node if root == "nodes" else targets.n_edge
 
             loss: Float[Array, "n_graph ..."] = graph_ops.segment_reduce(
-                loss, segments, reduction=self._reduction, mask=mask, segment_mask=graph_mask
+                loss,
+                segments,
+                reduction=self._reduction,
+                mask=mask,
+                segment_mask=graph_mask,
             )
             final_mask = graph_mask
         else:

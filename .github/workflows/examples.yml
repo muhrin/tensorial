@@ -1,0 +1,90 @@
+name: examples
+
+# Smoke-test every bundled example: set it up, train for one epoch on a few structures, then
+# evaluate the checkpoint.  New examples (and dataset variants) are picked up automatically
+# from `tensorial examples list`.
+on:
+  schedule:
+    - cron: '30 2 * * *'  # nightly, to catch breakage from dataset hosts or dependencies
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'src/tensorial/**'
+      - '.github/workflows/examples.yml'
+      - '.github/scripts/run_example.sh'
+      - 'pyproject.toml'
+      - 'uv.lock'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  discover:
+    name: Find examples
+    runs-on: ubuntu-latest
+    outputs:
+      examples: ${{ steps.list.outputs.examples }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: List examples
+        id: list
+        run: |
+          examples="$(uv run tensorial examples list --json)"
+          echo "Found: ${examples}"
+          echo "examples=${examples}" >> "$GITHUB_OUTPUT"
+
+  run:
+    name: ${{ matrix.example }}
+    needs: discover
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        example: ${{ fromJSON(needs.discover.outputs.examples) }}
+    env:
+      JAX_PLATFORMS: cpu
+      WORK_DIR: examples-smoke
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      # Datasets are downloaded into the example's `data/` and `.cache/` folders
+      - name: Cache datasets
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.WORK_DIR }}/*/data
+            ${{ env.WORK_DIR }}/*/.cache
+          key: example-data-${{ matrix.example }}-${{ hashFiles('src/tensorial/examples/**/data/*.yaml', 'src/tensorial/datasets/*.py') }}
+          restore-keys: example-data-${{ matrix.example }}-
+
+      - name: Run example
+        run: uv run bash .github/scripts/run_example.sh "${{ matrix.example }}" "${WORK_DIR}"
+
+      - name: Upload logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-${{ matrix.example }}
+          path: ${{ env.WORK_DIR }}/*/logs
+          if-no-files-found: ignore
