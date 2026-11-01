@@ -12,7 +12,7 @@ from tensorial.data import PassthroughFetcher
 from tensorial.gcnn import keys
 from tensorial.gcnn.atomic import keys as atomic_keys
 from tensorial.gcnn.data import GraphDataModule, PreSplitDataset
-from tensorial.gcnn.data._datamodule import KFoldSplit
+from tensorial.gcnn.data._datamodule import KFoldSplit, PreSplit
 
 
 def _dset(n: int):
@@ -200,6 +200,49 @@ def test_from_datasets_partial_splits_ok():
     assert dm._dataset["train"] is train
     assert dm._dataset["val"] is None
     assert dm._dataset["test"] is None
+
+
+@pytest.mark.parametrize("val_from_train,n_val", [(3, 3), (0.2, 2)])
+def test_from_datasets_val_from_train(val_from_train, n_val):
+    train, test = _trivial_graphs(10), _trivial_graphs(4)
+    dm = GraphDataModule.from_datasets(
+        PassthroughFetcher(PreSplitDataset(train=train, test=test)),
+        val_from_train=val_from_train,
+        batch_size=2,
+    )
+    _setup(dm)
+    assert len(dm.data_train) == 10 - n_val
+    assert len(dm.data_val) == n_val
+    assert len(dm.data_test) == 4
+
+    # The validation set is carved out of the training set without overlap
+    train_ids = {_graph_id(g) for g in dm.data_train}
+    val_ids = {_graph_id(g) for g in dm.data_val}
+    assert not train_ids & val_ids
+    assert train_ids | val_ids == set(range(10))
+
+
+def test_from_datasets_val_from_train_rejects_existing_val():
+    dm = GraphDataModule.from_datasets(
+        PassthroughFetcher(PreSplitDataset(train=_trivial_graphs(10), val=_trivial_graphs(2))),
+        val_from_train=2,
+    )
+    with pytest.raises(ValueError, match="validation set was also provided"):
+        _setup(dm)
+
+
+def test_from_datasets_val_from_train_too_large():
+    dm = GraphDataModule.from_datasets(
+        PassthroughFetcher(PreSplitDataset(train=_trivial_graphs(5))), val_from_train=5
+    )
+    with pytest.raises(ValueError, match="must be smaller than the training set"):
+        _setup(dm)
+
+
+@pytest.mark.parametrize("val_from_train", [0, -1, 0.0, 1.0])
+def test_val_from_train_invalid_values(val_from_train):
+    with pytest.raises(ValueError):
+        PreSplit(val_from_train=val_from_train)
 
 
 @pytest.mark.parametrize("loader_attr", ["val_dataloader", "test_dataloader"])
@@ -471,6 +514,11 @@ def test_graph_missing_stress_is_filled_with_zeros():
     # Both graphs share the reconciled (superset) key set now.
     assert atomic_keys.STRESS in dm.data_train[0].globals
     assert atomic_keys.STRESS in dm.data_train[1].globals
+
+    # The per-field mask marks the filled-in stress as a placeholder
+    stress_mask = gcnn.keys.mask_for(atomic_keys.STRESS)
+    assert not np.asarray(dm.data_train[0].globals[stress_mask]).any()
+    assert np.asarray(dm.data_train[1].globals[stress_mask]).all()
 
     # The filled (missing) graph is zero-stressed; the carried one is untouched.
     filled = np.asarray(dm.data_train[0].globals[atomic_keys.STRESS])

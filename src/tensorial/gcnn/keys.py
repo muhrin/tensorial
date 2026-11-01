@@ -31,6 +31,16 @@ SPECIES: Final[str] = "species"
 MASK: Final[str] = "mask"
 
 
+def mask_for(key: str, delimiter: str = "_") -> str:
+    """Helper to create the key of a per-field mask.
+
+    A per-field mask marks which entries of a field hold real data (``True``) and which were
+    filled in with a placeholder (``False``), e.g. the stress of a structure that has none.
+    Losses and metrics apply it automatically when it is present next to the field.
+    """
+    return delimiter.join([key, MASK])
+
+
 def predicted(key: str, delimiter: str = "_") -> str:
     """Helper to create a 'predicted' key."""
     return delimiter.join(["predicted", key])

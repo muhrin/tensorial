@@ -6,14 +6,17 @@ whole graph batch.
 """
 
 from functools import singledispatch
+import math
 from typing import TYPE_CHECKING, Literal
 
 import e3nn_jax as e3j
 import jax
 import jax.numpy as jnp
+import jax.typing
 from jaxtyping import Bool, Float, Int
 import jraph
 from pytray import tree
+from reax.utils import masking
 
 from .. import nn_utils
 from . import keys, utils
@@ -28,6 +31,7 @@ __all__ = (
     "segment_min",
     "segment_reduce",
     "graph_segment_reduce",
+    "mdiv",
 )
 
 
@@ -444,3 +448,21 @@ def _jraph_segment(
     return jax.tree.map(
         lambda n: op(n, segment_ids, num_segments, indices_are_sorted, unique_indices), inputs
     )
+
+
+def mdiv(
+    num: jax.typing.ArrayLike,
+    denom: jax.typing.ArrayLike,
+    where: jax.typing.ArrayLike | None = None,
+):
+    """Divide that supports supplying a mask, where `False` values will just return the numerator"""
+    # Use prod here because `IrrepsArray` doesn't have `.size`
+    if math.prod(num.shape) != math.prod(denom.shape):
+        raise ValueError(
+            f"Sizes of numerator and denominator must match, got {num.shape} and {denom.shape}"
+        )
+    if where is not None:
+        where = masking.prepare_mask(denom, where)
+        denom = jnp.where(where, denom, 1.0)
+
+    return num / denom.reshape(num.shape)

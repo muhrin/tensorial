@@ -1,10 +1,9 @@
 from collections.abc import Sequence
-import math
 from typing import TYPE_CHECKING, ClassVar, TypeVar, cast
 
 import beartype
+import jax
 import jax.numpy as jnp
-import jax.typing
 import jaxtyping as jt
 from jaxtyping import Array, Int
 import jraph
@@ -15,6 +14,7 @@ from typing_extensions import override
 
 from ... import nn_utils
 from .. import _tree, keys
+from ..graph_ops import mdiv  # noqa: F401  (re-exported for backwards compatibility)
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -33,7 +33,22 @@ def graph_metric(
     targets: "gcnn.TreePathLike | None" = None,
     mask: "gcnn.TreePathLike | Literal['auto'] | None" = "auto",
     normalise_by: "gcnn.TreePathLike | None" = None,
+    optional: bool = False,
 ) -> "GraphMetric":
+    """Create a metric that is evaluated on fields of a graph.
+
+    Padding masks, and the per-field mask next to the target (see
+    :func:`~tensorial.gcnn.keys.mask_for`), are applied when present.
+
+    Args:
+        metric: the metric to evaluate (or its name)
+        predictions: path to the predicted values
+        targets: path to the target values, if the metric takes them
+        mask: path to the mask, or ``"auto"`` for the padding mask of the predictions
+        normalise_by: path to values to divide predictions and targets by
+        optional: if ``True``, the metric is skipped for data that lacks the predicted or
+            target field (e.g. stresses of molecules) instead of raising an error
+    """
     predictions_from = _tree.path_from_str(predictions)
     targets_from = _tree.path_to_str(targets) if targets is not None else None
     mask_from = _tree.path_to_str(mask) if mask is not None else None
@@ -45,26 +60,9 @@ def graph_metric(
         target_key = targets_from
         mask_key = mask_from
         normalise_by = norm_by
+        is_optional = optional
 
     return _GraphMetric()
-
-
-def mdiv(
-    num: jax.typing.ArrayLike,
-    denom: jax.typing.ArrayLike,
-    where: jax.typing.ArrayLike | None = None,
-):
-    """Divide that supports supplying a mask, where `False` values will just return the numerator"""
-    # Use prod here because `IrrepsArray` doesn't have `.size`
-    if math.prod(num.shape) != math.prod(denom.shape):
-        raise ValueError(
-            "Sizes of numerator and denominator must match, got {num.shape} and {denom.shape}"
-        )
-    if where is not None:
-        where = masking.prepare_mask(denom, where)
-        denom = jnp.where(where, denom, 1.0)
-
-    return num / denom.reshape(num.shape)
 
 
 class GraphMetric(reax.Metric):
@@ -73,6 +71,7 @@ class GraphMetric(reax.Metric):
     target_key: "ClassVar[gcnn.typing.TreePathLike | None]" = None
     mask_key: "ClassVar[gcnn.typing.TreePathLike | None]" = "auto"
     normalise_by: "ClassVar[gcnn.typing.TreePathLike | None]" = None
+    is_optional: ClassVar[bool] = False
 
     _state: reax.Metric[OutT] | None
 
@@ -99,6 +98,15 @@ class GraphMetric(reax.Metric):
             # In this case, the user is typically using a different key in the same graph
             targets = predictions
 
+        if self.is_optional and not (
+            _tree.has_path(predictions, self.pred_key)
+            and (self.target_key is None or _tree.has_path(targets, self.target_key))
+        ):
+            # Lets a ``MetricCollection`` created with ``ignore_missing=True`` leave us out
+            raise reax.exceptions.DataNotFound(
+                f"No '{self.pred_key}' or '{self.target_key}' in the data for an optional metric"
+            )
+
         pred = _tree.get(predictions, self.pred_key)
 
         mask = None
@@ -113,6 +121,12 @@ class GraphMetric(reax.Metric):
                 mask = _tree.get(predictions, mask_key)
             except KeyError:
                 mask = None
+
+        if self.target_key is not None:
+            # Leave out entries that only hold a filled-in placeholder (e.g. zero stress)
+            field_mask = _tree.get_field_mask(targets, self.target_key)
+            if field_mask is not None:
+                mask = field_mask if mask is None else mask & field_mask
 
         if self.normalise_by is not None:
             pred = mdiv(pred, _tree.get(predictions, self.normalise_by), where=mask)

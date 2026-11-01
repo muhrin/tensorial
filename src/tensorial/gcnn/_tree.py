@@ -141,6 +141,43 @@ def get_mask(
         return None
 
 
+def get_field_mask(
+    graph: jraph.GraphsTuple,
+    path: "gcnn.typing.TreePathLike",
+    delimiter=DEFAULT_DELIMITER,
+) -> jax.Array | None:
+    """Get the per-field mask for a given path in the graph, if it exists.
+
+    The per-field mask lives next to the field, under the key given by
+    :func:`~tensorial.gcnn.keys.mask_for`, e.g. ``globals.stress_mask`` for
+    ``globals.stress``.  Unlike :func:`get_mask` (which marks padding), it marks which
+    entries hold real data rather than a filled-in placeholder.
+
+    Args:
+        graph: The graph to get the mask from
+        path: The path of the field
+        delimiter: The delimiter used to parse the path
+
+    Returns:
+        The mask array if found, otherwise ``None``
+    """
+    path = path_from_str(path, delimiter)
+    mask_path = path[:-1] + (keys.mask_for(path[-1]),)
+    try:
+        return tree.get_by_path(graph._asdict(), mask_path)
+    except (KeyError, TypeError):  # TypeError if, e.g., ``graph.globals`` is ``None``
+        return None
+
+
+def has_path(graph: jraph.GraphsTuple, path: "gcnn.typing.TreePathLike") -> bool:
+    """Return ``True`` if the graph has a value at the given path."""
+    try:
+        tree.get_by_path(graph._asdict(), path_from_str(path))
+    except (KeyError, TypeError):  # TypeError if, e.g., ``graph.globals`` is ``None``
+        return False
+    return True
+
+
 def num_entries(entity: Literal["nodes", "edges", "globals"], graph: jraph.GraphsTuple) -> int:
     """Return the number of entries in a component of the graph
 

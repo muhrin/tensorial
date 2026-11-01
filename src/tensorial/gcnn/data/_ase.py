@@ -204,7 +204,10 @@ class AseDataFetchers(data.DataFetcher[dict[str, Sequence[jraph.GraphsTuple]]]):
         # the resulting mapping may be a proper subset of ``self._filepaths``.
         return {
             name: AseDataFetcher(
-                path=path, as_graphs=self._as_graphs, cache_dir=self._cache_dir
+                path=path,
+                as_graphs=self._as_graphs,
+                read_kwargs=dict(self._read_kwargs),
+                cache_dir=self._cache_dir,
             ).fetch()
             for name, path in self._filepaths.items()
             if path is not None
@@ -296,6 +299,7 @@ def ase_graph_module_random_split(
     as_graphs: dict[str, Any],
     train_val_test_split: Sequence[float] = (0.85, 0.05, 0.1),
     *,
+    limit: int | None = None,
     batch_size: int = 32,
     batch_mode: "gcnn.data.BatchMode | str" = _common.BatchMode.IMPLICIT,
     pad_to_multiple: "int | str | jax.Device | None" = None,
@@ -310,9 +314,10 @@ def ase_graph_module_random_split(
         as_graphs: keyword arguments for
             :func:`~tensorial.gcnn.atomic.graph_from_ase`, e.g. ``{"r_max": 5.0}``
         train_val_test_split: the (train, val, test) fractions to use
+        limit: the maximum number of structures to read from each file
     """
     return _datamodule.GraphDataModule.from_random_split(
-        AseDataFetcher(path, as_graphs=as_graphs),
+        AseDataFetcher(path, as_graphs=as_graphs, limit=limit),
         train_val_test_split,
         batch_size=batch_size,
         batch_mode=batch_mode,
@@ -328,6 +333,7 @@ def ase_graph_module_kfold(
     *,
     seed: int | None = 42,
     test_fraction: float = 0.1,
+    limit: int | None = None,
     batch_size: int = 32,
     batch_mode: "gcnn.data.BatchMode | str" = _common.BatchMode.IMPLICIT,
     pad_to_multiple: "int | str | jax.Device | None" = None,
@@ -347,9 +353,10 @@ def ase_graph_module_kfold(
         n_folds: the total number of folds
         seed: the random seed
         test_fraction: the fraction of data to carve out as the test set
+        limit: the maximum number of structures to read from each file
     """
     return _datamodule.GraphDataModule.from_kfold(
-        AseDataFetcher(path, as_graphs=as_graphs),
+        AseDataFetcher(path, as_graphs=as_graphs, limit=limit),
         fold=fold,
         n_folds=n_folds,
         seed=seed,
@@ -367,6 +374,8 @@ def ase_graph_module_from_datasets(
     train=None,
     val=None,
     test=None,
+    val_from_train: int | float | None = None,
+    limit: int | None = None,
     batch_size: int = 32,
     batch_mode: "gcnn.data.BatchMode | str" = _common.BatchMode.IMPLICIT,
     pad_to_multiple: "int | str | jax.Device | None" = None,
@@ -382,9 +391,16 @@ def ase_graph_module_from_datasets(
         train: path(s) to the training structures, or ``None``
         val: path(s) to the validation structures, or ``None``
         test: path(s) to the test structures, or ``None``
+        val_from_train: for benchmarks that provide no validation set, randomly hold
+            out this many structures (``int``) or this fraction (``float``) of the
+            training set as the validation set
+        limit: the maximum number of structures to read from each file
     """
     return _datamodule.GraphDataModule.from_datasets(
-        AseDataFetchers({"train": train, "val": val, "test": test}, as_graphs=as_graphs),
+        AseDataFetchers(
+            {"train": train, "val": val, "test": test}, as_graphs=as_graphs, limit=limit
+        ),
+        val_from_train=val_from_train,
         batch_size=batch_size,
         batch_mode=batch_mode,
         pad_to_multiple=pad_to_multiple,

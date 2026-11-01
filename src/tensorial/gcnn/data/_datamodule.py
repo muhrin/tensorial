@@ -61,6 +61,22 @@ _OPTIONAL_GLOBAL_KEYS: Final[dict[str, Callable[[int], np.ndarray]]] = {
     atomic_keys.STRESS: lambda n: np.zeros((n, 3, 3), dtype=np.float32),
 }
 
+# Fillable keys that are *targets*: a filled-in value is a placeholder, not data, so each graph
+# also gets a per-field mask (``gcnn.keys.mask_for(key)``) that is ``False`` where the value was
+# filled in.  Losses and metrics apply this mask automatically, so e.g. a molecule's placeholder
+# zero stress never counts as a stress target.
+_MASKED_GLOBAL_KEYS: Final[tuple[str, ...]] = (atomic_keys.STRESS,)
+_FIELD_MASK_KEYS: Final[dict[str, str]] = {
+    gcnn_keys.mask_for(key): key for key in _MASKED_GLOBAL_KEYS
+}
+
+
+def _with_field_mask_keys(reference: set[str]) -> set[str]:
+    """Return ``reference`` plus the per-field mask keys for the masked targets it contains."""
+    return reference | {
+        mask_key for mask_key, key in _FIELD_MASK_KEYS.items() if key in reference
+    }
+
 
 def _graph_keys(graph: jraph.GraphsTuple) -> set[str]:
     return (
@@ -86,7 +102,11 @@ def _normalize_graph_keys(graph: jraph.GraphsTuple, reference: set[str]) -> jrap
     n_edge = int(np.asarray(graph.n_edge).sum())
     n_graph = int(np.asarray(graph.n_node).shape[0])
     for key in missing:
-        if key in _OPTIONAL_EDGE_KEYS:
+        if key in _FIELD_MASK_KEYS:
+            # True if this graph has real values for the field, False if they are filled in
+            has_values = _FIELD_MASK_KEYS[key] not in missing
+            global_updates[key] = np.full((n_graph,), has_values, dtype=np.bool_)
+        elif key in _OPTIONAL_EDGE_KEYS:
             edge_updates[key] = _OPTIONAL_EDGE_KEYS[key](n_edge)
         elif key in _OPTIONAL_GLOBAL_KEYS:
             global_updates[key] = _OPTIONAL_GLOBAL_KEYS[key](n_graph)
@@ -119,6 +139,7 @@ def _normalize_graphs(
     registered in ``_OPTIONAL_EDGE_KEYS`` / ``_OPTIONAL_GLOBAL_KEYS`` are filled
     with a neutral default (identity cell, zero edge-cell-shifts, zero stress)
     so an open-boundary molecule can sit in the same batch as a periodic crystal.
+    Filled-in targets (stress) also get a per-field mask marking them as placeholders.
     Any *other* missing key raises :class:`ValueError` so the user is forced to
     reconcile it rather than silently dropping a real feature.
     """
@@ -270,17 +291,55 @@ class PreSplit(SplitStrategy[PreSplitDataset]):
     ``train`` / ``val`` / ``test`` keys, each value ``None`` or a dataset).
     ``split`` just unpacks the mapping.  At least one of the three must be
     non-``None``; this is checked by ``GraphDataModule.setup``.
+
+    Many benchmarks ship a training set and test set(s) but no validation set.
+    For these, pass ``val_from_train`` to randomly hold out part of the training
+    set as the validation set: an ``int`` is a number of structures, a ``float``
+    is a fraction of the training set.
+
+    Args:
+        val_from_train: how much of the training set to hold out for validation,
+            or ``None`` to use the splits exactly as given.
     """
 
+    def __init__(self, val_from_train: int | float | None = None) -> None:
+        if val_from_train is not None:
+            if isinstance(val_from_train, float) and not 0.0 < val_from_train < 1.0:
+                raise ValueError(
+                    f"val_from_train must be in (0, 1) when a fraction, got {val_from_train}"
+                )
+            if isinstance(val_from_train, int) and val_from_train <= 0:
+                raise ValueError(f"val_from_train must be positive, got {val_from_train}")
+
+        self._val_from_train: Final[int | float | None] = val_from_train
+
     def split(self, dataset: PreSplitDataset, engine: "reax.Engine", /) -> Split:
-        return Split(
-            train=dataset.get("train"),
-            val=dataset.get("val"),
-            test=dataset.get("test"),
-        )
+        train, val = dataset.get("train"), dataset.get("val")
+        if self._val_from_train is not None:
+            if train is None:
+                raise ValueError("val_from_train was set, but there is no training set")
+            if val is not None:
+                raise ValueError(
+                    "val_from_train was set, but a validation set was also provided; "
+                    "use one or the other"
+                )
+            if isinstance(self._val_from_train, float):
+                lengths = (1.0 - self._val_from_train, self._val_from_train)
+            else:
+                if self._val_from_train >= len(train):
+                    raise ValueError(
+                        f"val_from_train ({self._val_from_train}) must be smaller than the "
+                        f"training set ({len(train)})"
+                    )
+                lengths = (len(train) - self._val_from_train, self._val_from_train)
+            train, val = reax.data.random_split(engine.rngs, train, lengths=lengths)
+
+        return Split(train=train, val=val, test=dataset.get("test"))
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}()"
+        if self._val_from_train is None:
+            return f"{type(self).__name__}()"
+        return f"{type(self).__name__}(val_from_train={self._val_from_train})"
 
 
 class GraphDataModule(Generic[D], reax.DataModule[jraph.GraphsTuple, jraph.GraphsTuple]):
@@ -484,6 +543,7 @@ class GraphDataModule(Generic[D], reax.DataModule[jraph.GraphsTuple, jraph.Graph
             if ds is not None:
                 for graph in ds:
                     reference |= _graph_keys(graph)
+        reference = _with_field_mask_keys(reference)
 
         batch_size = self._batch_size if self._batch_mode is _common.BatchMode.IMPLICIT else 1
         pad_to_multiple = (
@@ -572,14 +632,22 @@ class GraphDataModule(Generic[D], reax.DataModule[jraph.GraphsTuple, jraph.Graph
         cls,
         dataset: "tensorial.data.DataFetcher[gcnn.data.PreSplitDataset] | PreSplitDataset",
         *,
+        val_from_train: int | float | None = None,
         batch_size: int = 32,
         batch_mode: "gcnn.data.BatchMode | str" = _common.BatchMode.IMPLICIT,
         pad_to_multiple: "int | str | jax.Device | None" = None,
     ) -> "GraphDataModule":
-        """Build a module from datasets the user has already split."""
+        """Build a module from datasets the user has already split.
+
+        Args:
+            dataset: The pre-split datasets (or a fetcher producing them).
+            val_from_train: If set, randomly hold out this many structures (``int``)
+                or this fraction (``float``) of the training set as the validation
+                set.  See :class:`PreSplit`.
+        """
         return cls(
             dataset,
-            PreSplit(),
+            PreSplit(val_from_train=val_from_train),
             batch_size=batch_size,
             batch_mode=batch_mode,
             pad_to_multiple=pad_to_multiple,
