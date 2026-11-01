@@ -77,6 +77,7 @@ List the available examples:
 
    tensorial examples list
    tensorial examples            # 'list' is the default
+   tensorial examples list --json  # machine-readable, e.g. for CI
 
 Copy an example into the current directory (or a destination you give):
 

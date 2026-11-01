@@ -9,7 +9,7 @@ Installing the package exposes a ``tensorial`` command (see
 ``tensorial predict -i <config-or-dir>``
     Evaluate a trained checkpoint (see :func:`tensorial.reaxkit.evaluate`).
 
-``tensorial examples [list|init] [<name> [<dest>]]``
+``tensorial examples [list [--json]|init] [<name> [<dest>]]``
     List or copy the bundled example configurations.
 
 ``train`` and ``predict`` forward their remaining arguments to Hydra, so any
@@ -19,6 +19,7 @@ config value can be overridden on the command line.  See the
 
 import argparse
 from importlib import resources
+import json
 import os
 import pathlib
 import re
@@ -93,21 +94,31 @@ def _required_files(yaml_file: pathlib.Path):
     return files
 
 
-def _list_examples():
+def _example_names() -> list[str]:
+    """Return the name of every example, including each variant (e.g. ``mlip.si``)."""
+    names = []
     with resources.as_file(_examples_root()) as root_path:
-        names = _dotted_example_names(root_path)
-    print("Available examples:")
-    for name in names:
-        base = name.split(".")[0]
-        with resources.as_file(_examples_root()) as root_path:
+        for name in _dotted_example_names(root_path):
+            base = name.split(".")[0]
             example_path = root_path / base
             group = _variant_group(example_path)
-        if group:
-            for yaml_file in sorted((example_path / group).iterdir()):
-                if yaml_file.is_file() and yaml_file.suffix in (".yaml", ".yml"):
-                    print(f"  - {base}.{yaml_file.stem}")
-        else:
-            print(f"  - {name}")
+            if group:
+                for yaml_file in sorted((example_path / group).iterdir()):
+                    if yaml_file.is_file() and yaml_file.suffix in (".yaml", ".yml"):
+                        names.append(f"{base}.{yaml_file.stem}")
+            else:
+                names.append(name)
+    return names
+
+
+def _list_examples(as_json: bool = False):
+    names = _example_names()
+    if as_json:
+        print(json.dumps(names))
+        return
+    print("Available examples:")
+    for name in names:
+        print(f"  - {name}")
 
 
 def _split_name(name: str):
@@ -179,11 +190,20 @@ def _init_example(name: str, dest: pathlib.Path):
 
 
 def _override_group(dest_folder: pathlib.Path, group: str, choice: str):
-    """Rewrite the Hydra default for ``group`` in ``train.yaml`` to ``choice``."""
-    train_yaml = dest_folder / "train.yaml"
-    if not train_yaml.is_file():
+    """Rewrite the Hydra default for ``group`` to ``choice`` in the example's top-level configs.
+
+    Both ``train.yaml`` and ``eval.yaml`` are updated, so evaluating a trained model uses the
+    same dataset it was trained on.
+    """
+    for filename in ("train.yaml", "eval.yaml"):
+        _override_group_in(dest_folder / filename, group, choice)
+
+
+def _override_group_in(config_file: pathlib.Path, group: str, choice: str):
+    """Rewrite the Hydra default for ``group`` in ``config_file`` to ``choice``."""
+    if not config_file.is_file():
         return
-    text = train_yaml.read_text(encoding="utf-8")
+    text = config_file.read_text(encoding="utf-8")
     pattern = rf"^(\s*)[-]\s*{re.escape(group)}:\s*\S+.*$"
     replaced, count = re.subn(pattern, rf"\1- {group}: {choice}", text, count=1, flags=re.M)
     if count == 0:
@@ -191,20 +211,20 @@ def _override_group(dest_folder: pathlib.Path, group: str, choice: str):
         pattern = rf"^(\s*)[-]\s*{{\s*{re.escape(group)}:\s*\S+\s*}}.*$"
         replaced, count = re.subn(pattern, rf"\1- {group}: {choice}", text, count=1, flags=re.M)
     if count:
-        train_yaml.write_text(replaced, encoding="utf-8")
+        config_file.write_text(replaced, encoding="utf-8")
 
 
 def _run_examples(tokens: list):
     """Dispatch the `examples` sub-arguments.
 
-    Accepts ``list``, ``init <name> [dest]`` or the shorthand
+    Accepts ``list [--json]``, ``init <name> [dest]`` or the shorthand
     ``<name> [dest]``.  With no arguments, equivalent to ``list``.
     """
     if not tokens:
         _list_examples()
         return
     if tokens[0] == "list":
-        _list_examples()
+        _list_examples(as_json="--json" in tokens[1:])
     elif tokens[0] == "init":
         if len(tokens) < 2:
             print("error: 'examples init' requires an example name (e.g. mlip.si)")

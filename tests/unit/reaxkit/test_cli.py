@@ -1,4 +1,6 @@
+import json
 import pathlib
+import re
 
 from tensorial.reaxkit import cli
 
@@ -30,3 +32,18 @@ def test_init_example_copies_required_data(tmp_path: pathlib.Path):
     assert (out / "data" / "sitraj.xyz").is_file()
     # Sibling variants (and their data) are not copied.
     assert not (out / "data" / "qm9.yaml").exists()
+
+
+def test_list_examples_json(capsys):
+    cli._list_examples(as_json=True)
+    names = json.loads(capsys.readouterr().out)
+    assert "mlip.si" in names
+    assert names == cli._example_names()
+
+
+def test_init_example_sets_data_for_train_and_eval(tmp_path: pathlib.Path):
+    cli._init_example("mlip.3bpa", tmp_path)
+
+    out = tmp_path / "mlip-3bpa"
+    for config in ("train.yaml", "eval.yaml"):
+        assert re.search(r"^\s*- data: 3bpa\s*$", (out / config).read_text(), flags=re.M)

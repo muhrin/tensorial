@@ -5,7 +5,7 @@ resulting metrics, driven by the Hydra ``eval.yaml`` config script.
 """
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import hydra
 import omegaconf
@@ -22,7 +22,7 @@ DEFAULT_EVAL_FILE = "eval.yaml"
 
 
 @utils.task_wrapper
-def evaluate(cfg: omegaconf.DictConfig) -> None:
+def evaluate(cfg: omegaconf.DictConfig) -> tuple[dict[str, Any], dict[str, Any]]:
     """Evaluates given checkpoint on a datamodule testset.
 
     This method is wrapped in optional @task_wrapper decorator, that controls the behavior during
@@ -30,6 +30,9 @@ def evaluate(cfg: omegaconf.DictConfig) -> None:
 
     Args:
         cfg: DictConfig configuration composed by Hydra.
+
+    Returns:
+        The metrics logged by the stages that were run, and the objects that were created.
     """
     _LOGGER.info(
         "Instantiating datamodule <%s>",
@@ -65,20 +68,40 @@ def evaluate(cfg: omegaconf.DictConfig) -> None:
             model,
             datamodule=datamodule,
             ckpt_path=cfg[keys.CKPT_PATH],
-            **cfg.get(keys.VALIDATION, {}),
+            **_stage_kwargs(cfg, keys.VALIDATION),
         )
 
     if cfg.get(keys.TEST):
         _LOGGER.info("Starting testing")
         trainer.test(
-            model, datamodule=datamodule, ckpt_path=cfg[keys.CKPT_PATH], **cfg.get(keys.TEST, {})
+            model,
+            datamodule=datamodule,
+            ckpt_path=cfg[keys.CKPT_PATH],
+            **_stage_kwargs(cfg, keys.TEST),
         )
 
     if cfg.get(keys.PREDICT):
         _LOGGER.info("Starting prediction")
         trainer.predict(
-            model, datamodule=datamodule, ckpt_path=cfg[keys.CKPT_PATH], **cfg.get(keys.PREDICT, {})
+            model,
+            datamodule=datamodule,
+            ckpt_path=cfg[keys.CKPT_PATH],
+            **_stage_kwargs(cfg, keys.PREDICT),
         )
+
+    return trainer.listener_metrics, object_dict
+
+
+def _stage_kwargs(cfg: omegaconf.DictConfig, stage: str) -> dict:
+    """Keyword arguments for a stage, which may be enabled with a mapping or just ``true``.
+
+    ``true`` is what a training config uses to switch on testing after training, so a saved
+    training config can be evaluated directly.
+    """
+    value = cfg.get(stage)
+    if isinstance(value, (dict, omegaconf.DictConfig)):
+        return dict(value)
+    return {}
 
 
 def main(cfg: omegaconf.DictConfig) -> None:
