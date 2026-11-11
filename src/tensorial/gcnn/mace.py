@@ -386,7 +386,7 @@ class Mace(linen.Module):
     correlation_order: int = 3  # Correlation order at each layer (~ node_features^correlation)
     num_interactions: int = 2  # Number of interactions (layers)
     y0_values: Sequence[float] | None = None
-    soft_normalisation: bool | None = None
+    soft_normalisation: float | None = None
     # Number of features per node, default gcd of hidden_irreps multiplicities
     num_features: int | None = None
     num_types: int = 1

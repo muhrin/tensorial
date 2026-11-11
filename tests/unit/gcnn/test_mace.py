@@ -118,3 +118,36 @@ def test_interaction_block_normalization():
         receivers,
         node_types=node_types,
     )
+
+
+def test_mace_soft_normalisation(cube_graph: jraph.GraphsTuple):
+    def make_model(soft_normalisation):
+        return utils.graph_model(
+            5.0,
+            e3j.Irreps("0e + 1o + 2e"),
+            mace.Mace(
+                irreps_out="0e + 1o",
+                out_field="out",
+                hidden_irreps="2x0e + 2x1o",
+                soft_normalisation=soft_normalisation,
+            ),
+            type_numbers=[0],
+        )
+
+    # A small scale so that the soft norm actually bites on the (small) features of this graph
+    model = make_model(1e-3)
+    params = model.init(jax.random.PRNGKey(0), cube_graph)
+    out = model.apply(params, cube_graph).nodes["out"]
+    out_ref = make_model(None).apply(params, cube_graph).nodes["out"]
+    assert not np.allclose(out.array, out_ref.array)
+
+    def wrapper(positions: e3j.IrrepsArray) -> e3j.IrrepsArray:
+        new_nodes = cube_graph.nodes.copy()
+        new_nodes[gcnn.keys.POSITIONS] = positions.array
+        return model.apply(params, cube_graph._replace(nodes=new_nodes)).nodes["out"]
+
+    e3j.utils.assert_equivariant(
+        wrapper,
+        jax.random.PRNGKey(1),
+        e3j.IrrepsArray("1o", cube_graph.nodes[gcnn.keys.POSITIONS]),
+    )
